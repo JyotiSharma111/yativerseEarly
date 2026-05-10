@@ -4,8 +4,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ["'Bebas Neue'", "sans-serif"],
-        body: ["'Space Grotesk'", "sans-serif"],
+       display: ["'Syne'", "system-ui", "sans-serif"],
+        body: ["'DM Sans'", "system-ui", "sans-serif"],
       },
       colors: {
         brand: {
