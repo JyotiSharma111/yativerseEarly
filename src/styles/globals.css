@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base ── */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { @apply bg-brand-bg text-white font-body antialiased overflow-x-hidden; }
+  img  { @apply block max-w-full; }
+  a    { @apply text-inherit no-underline; }
+  button { @apply cursor-pointer border-none bg-transparent font-body; }
+  input, select, textarea { @apply font-body; }
+
+  ::selection { background: rgba(96,92,255,0.30); color: #fff; }
+  ::-webkit-scrollbar       { width: 5px; }
+  ::-webkit-scrollbar-track { @apply bg-brand-bg; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+}
+
+/* ── Reusable components ── */
+@layer components {
+
+  .text-gradient {
+    background: linear-gradient(135deg, #605CFF, #C86DD7, #FF6B8A);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #C9A84C 0%, #F5D27A 50%, #C9A84C 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glass {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .kicker {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full
+           text-xs font-mono font-medium tracking-widest uppercase;
+    border: 1px solid rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.45);
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-7 py-3.5 rounded-full
+           font-display font-bold text-sm text-white
+           transition-all duration-300 hover:scale-[1.03] active:scale-[0.98];
+    background: linear-gradient(135deg, #605CFF, #C86DD7);
+    box-shadow: 0 0 24px rgba(96,92,255,0.30);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-7 py-3.5 rounded-full
+           font-display font-semibold text-sm
+           transition-all duration-300 hover:text-white;
+    border: 1px solid rgba(255,255,255,0.14);
+    color: rgba(255,255,255,0.65);
+  }
+  .btn-ghost:hover { border-color: rgba(255,255,255,0.30); }
+
+  .btn-gold {
+    @apply inline-flex items-center gap-2 px-7 py-3.5 rounded-full
+           font-display font-bold text-sm text-black
+           transition-all duration-300 hover:scale-[1.03] active:scale-[0.98];
+    background: linear-gradient(135deg, #C9A84C 0%, #F5D27A 50%, #C9A84C 100%);
+    box-shadow: 0 0 28px rgba(201,168,76,0.32);
+  }
+
+  .hr-brand {
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(96,92,255,0.35), transparent);
+  }
+
+  .hr-gold {
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(201,168,76,0.35), transparent);
+  }
+}

@@ -1,0 +1,16 @@
+# YATIVerse robots.txt
+User-agent: *
+Allow: /
+
+# Campaign pages — allow full indexing
+Allow: /signal-ring
+Allow: /early-access
+
+# Disallow nothing on this site
+Disallow:
+
+# Sitemap location
+Sitemap: https://yativerse.com/sitemap.xml
+
+# Crawl-delay for bots (polite crawling)
+Crawl-delay: 1
