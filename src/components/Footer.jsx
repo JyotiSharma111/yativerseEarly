@@ -4,7 +4,7 @@ import { motion }    from 'framer-motion'
 import { fadeUp }    from '../lib/motion'
 
 const COLS = [
-  { title: 'Products',  links: [{ l: 'Signal Ring', h: '/wearables' }, { l: 'Thread Pendant', h: '/wearables' }, { l: 'AI Earbuds', h: '/wearables' }, { l: 'Yati OS', h: '/' }, { l: 'AI-1 Layer', h: '/' }] },
+  { title: 'Products',  links: [{ l: 'Signal Ring', h: '/wearables' }, { l: 'Thread Pendant', h: '/wearables' }, { l: 'AI Earbuds', h: '/wearables' }, { l: 'yAtI OS', h: '/' }, { l: 'AI-1 Layer', h: '/' }] },
   { title: 'Agents',    links: [{ l: 'Launch Agent', h: '/agents' }, { l: 'Network Agent', h: '/agents' }, { l: 'Focus Agent', h: '/agents' }, { l: 'Brand Agent', h: '/agents' }] },
   { title: 'Company',   links: [{ l: 'About', h: '/waitlist' }, { l: 'Journey', h: '/journey' }, { l: 'Blog', h: '/waitlist' }, { l: 'Careers', h: '/waitlist' }] },
   { title: 'Community', links: [{ l: 'Discord', h: '/community' }, { l: 'Stories', h: '/community' }, { l: 'Ambassadors', h: '/community' }, { l: 'Waitlist', h: '/waitlist' }] },
@@ -29,18 +29,21 @@ export default function Footer() {
         style={{ background: 'radial-gradient(ellipse, rgba(96,92,255,0.06), transparent 70%)' }} />
 
       {/* Ghost vision text */}
-      <motion.div {...fadeUp(0)} className="text-center mb-16 px-4">
-        <p className="font-display font-bold leading-[1.05] tracking-tight select-none"
-          style={{
-            fontSize: 'clamp(22px, 4vw, 52px)',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}>
-          The operating system<br />for the next generation.
-        </p>
-      </motion.div>
+<motion.div {...fadeUp(0)} className="text-center mb-16 px-4">
+  <p
+    className="font-display font-bold leading-[1.05] tracking-tight select-none"
+    style={{
+      fontSize: 'clamp(22px, 4vw, 52px)',
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,255,255,0.22))',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      backgroundClip: 'text',
+    }}
+  >
+    The operating eo-system<br />for the next generation.
+  </p>
+</motion.div>
+
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
 
@@ -50,7 +53,7 @@ export default function Footer() {
           {/* Brand + newsletter */}
           <div className="col-span-2 lg:col-span-1">
             <Link to="/" className="flex items-center gap-2.5 mb-3">
-              <img src="/logo.png" alt="YATIVerse" className="w-12 h-12 object-contain" />
+              <img src="/logo.png" alt="yAtIverse" className="w-12 h-12 object-contain" />
             </Link>
             <p className="text-sm text-white/38 leading-relaxed max-w-[210px] mb-5 font-body">
               Wear your future. Build what matters. Scale with AI.
@@ -104,11 +107,31 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <p className="text-xs text-white/24 font-body">© 2026 YATIVerse. All rights reserved.</p>
+          <p className="text-xs text-white/24 font-body">© 2026 yAtIverse. All rights reserved.</p>
           <div className="flex gap-6">
-            {['Privacy Policy', 'Terms', 'Cookies'].map((l) => (
-              <Link key={l} to="/waitlist" className="text-xs text-white/24 hover:text-white/55 transition-colors font-body">{l}</Link>
-            ))}
+            <div className="flex gap-6">
+  <Link 
+    to="/privacy-policy" 
+    className="text-xs text-white/24 hover:text-white/55 transition-colors font-body"
+  >
+    Privacy Policy
+  </Link>
+
+  <Link 
+    to="/terms" 
+    className="text-xs text-white/24 hover:text-white/55 transition-colors font-body"
+  >
+    Terms
+  </Link>
+
+  <Link 
+    to="/cookie-policy" 
+    className="text-xs text-white/24 hover:text-white/55 transition-colors font-body"
+  >
+    Cookies
+  </Link>
+</div>
+
           </div>
         </div>
       </div>

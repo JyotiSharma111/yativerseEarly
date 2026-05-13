@@ -1,4 +1,4 @@
-# YATIVerse robots.txt
+# yAtIverse robots.txt
 User-agent: *
 Allow: /
 
@@ -10,7 +10,7 @@ Allow: /early-access
 Disallow:
 
 # Sitemap location
-Sitemap: https://yativerse.com/sitemap.xml
+Sitemap: https://yAtIverse.com/sitemap.xml
 
 # Crawl-delay for bots (polite crawling)
 Crawl-delay: 1

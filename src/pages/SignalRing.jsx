@@ -39,7 +39,7 @@ const FEATURES = [
 const SPECS = [
   { label:'Sensors',      value:'EEG · GSR · Temp · Mic array · Accelerometer' },
   { label:'Battery',      value:'72 hrs continuous wear' },
-  { label:'AI Engine',    value:'YATIVerse AI-1 on-device' },
+  { label:'AI Engine',    value:'yAtIverse AI-1 on-device' },
   { label:'Connectivity', value:'Bluetooth 5.3 LE' },
   { label:'Materials',    value:'Grade 5 Titanium' },
   { label:'Sizes',        value:'5 · 6 · 7 · 8 · 9 · 10 · 11 · 12' },
@@ -114,18 +114,18 @@ export default function SignalRing() {
         title="Signal Ring — Wear the Signal"
         description="The AI ring that reads your environment and shifts you into the mode you need — before you even ask. Six intelligent modes. 72-hour battery. Grade 5 Titanium."
         path="/signal-ring"
-        image="https://yativerse.com/og-signal-ring.png"
+        image="https://yAtIverse.com/og-signal-ring.png"
       />
 
       {/* JSON-LD Product Schema */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context":"https://schema.org",
         "@type":"Product",
-        "name":"YATIVerse Signal Ring",
+        "name":"yAtIverse Signal Ring",
         "description":"AI-connected smart ring with 6 intelligent modes, 72-hour battery, and on-device AI-1 processing. Grade 5 Titanium build.",
-        "brand":{ "@type":"Brand", "name":"YATIVerse" },
-        "offers":{ "@type":"Offer", "price":"149", "priceCurrency":"USD", "availability":"https://schema.org/PreOrder", "url":"https://yativerse.com/signal-ring" },
-        "image":"https://yativerse.com/og-signal-ring.png",
+        "brand":{ "@type":"Brand", "name":"yAtIverse" },
+        "offers":{ "@type":"Offer", "price":"149", "priceCurrency":"USD", "availability":"https://schema.org/PreOrder", "url":"https://yAtIverse.com/signal-ring" },
+        "image":"https://yAtIverse.com/og-signal-ring.png",
         "category":"Smart Ring / Wearable Technology",
         "aggregateRating":{ "@type":"AggregateRating", "ratingValue":"4.9", "reviewCount":"1200" }
       })}} />
@@ -145,7 +145,7 @@ export default function SignalRing() {
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-mono font-medium tracking-widest uppercase"
               style={{ border:`1px solid rgba(201,168,76,0.40)`, color:GOLD, background:'rgba(201,168,76,0.10)' }}>
               <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background:GOLD }} />
-              YATIVerse Signal Ring
+              yAtIverse Signal Ring
             </div>
           </motion.div>
 
@@ -231,7 +231,7 @@ export default function SignalRing() {
                 </span>
               </h2>
               <p className="font-body text-base leading-relaxed text-white/58">
-                Signal Ring runs the YATIVerse AI-1 engine entirely on-device. No cloud. No latency. No privacy compromise. It builds a live model of your cognitive and physiological patterns — getting smarter every hour you wear it.
+                Signal Ring runs the yAtIverse AI-1 engine entirely on-device. No cloud. No latency. No privacy compromise. It builds a live model of your cognitive and physiological patterns — getting smarter every hour you wear it.
               </p>
             </motion.div>
             <motion.div {...fadeLeft(0.12)} className="space-y-3">
@@ -254,7 +254,7 @@ export default function SignalRing() {
           <motion.div {...scaleIn(0.15)} className="relative rounded-3xl overflow-hidden aspect-[4/5]"
             style={{ border:'1px solid rgba(255,255,255,0.08)' }}>
             <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=80"
-              alt="YATIVerse AI dashboard" className="w-full h-full object-cover" loading="lazy" />
+              alt="yAtIverse AI dashboard" className="w-full h-full object-cover" loading="lazy" />
             <div className="absolute inset-0" style={{ background:'linear-gradient(to top, rgba(10,9,0,0.85) 0%, transparent 50%)' }} />
             <div className="absolute bottom-5 left-5 right-5 p-4 rounded-2xl"
               style={{ background:'rgba(10,9,0,0.88)', border:`1px solid ${GOLD}22`, backdropFilter:'blur(12px)' }}>

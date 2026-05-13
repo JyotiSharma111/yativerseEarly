@@ -9,16 +9,16 @@ import { fadeUp, fadeLeft, fadeRight, scaleIn } from '../lib/motion'
 const T = { purple:'#605CFF', pink:'#C86DD7', teal:'#4ECDC4', rose:'#FF6B8A' }
 
 const PRODUCTS = [
-  { id:'ring',    name:'Signal Ring',    tagline:'Subtle intelligence. Powerful presence.',      tag:'Available now', tagColor:T.teal,   price:'From $149', color:T.purple, img:'ring1.jpeg', specs:['Focus tracking','Haptic alerts','Agent sync','5-day battery','Titanium body'], desc:'The Signal Ring is your always-on identity layer. It syncs with Yati OS to surface focus scores, meeting signals, and agent alerts — without ever pulling out your phone.' },
+  { id:'ring',    name:'Signal Ring',    tagline:'Subtle intelligence. Powerful presence.',      tag:'Available now', tagColor:T.teal,   price:'From $149', color:T.purple, img:'ring1.jpeg', specs:['Focus tracking','Haptic alerts','Agent sync','5-day battery','Titanium body'], desc:'The Signal Ring is your always-on identity layer. It syncs with yAtI OS to surface focus scores, meeting signals, and agent alerts — without ever pulling out your phone.' },
   { id:'pendant', name:'Thread Pendant', tagline:'Your AI. Close to heart.',                    tag:'Pre-order',     tagColor:T.pink,   price:'From $199', color:T.pink,   img:'pendant1.jpeg', specs:['Voice capture','AI context sync','Ambient mode','Wireless charge','Surgical steel'], desc:'Thread is a wearable intelligence pendant designed to sit close to you. It acts as a passive AI interface — capturing ambient context, surfacing insights, and connecting silently to your agent ecosystem.' },
-  { id:'earbuds', name:'Yati Earbuds',   tagline:'Ambient intelligence. Always listening.',     tag:'Coming soon',   tagColor:T.rose,   price:'TBA',       color:T.rose,   img:'https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?auto=format&fit=crop&w=1200&q=80', specs:['Agent audio feed','Focus mode','Noise filtering','Call coaching','All-day wear'], desc:'Future earbuds built for founders — not music, but clarity. They surface agent briefings, coach your focus, and filter the noise so you can stay in flow.' },
+  { id:'earbuds', name:'yAtI Earbuds',   tagline:'Ambient intelligence. Always listening.',     tag:'Coming soon',   tagColor:T.rose,   price:'TBA',       color:T.rose,   img:'https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?auto=format&fit=crop&w=1200&q=80', specs:['Agent audio feed','Focus mode','Noise filtering','Call coaching','All-day wear'], desc:'Future earbuds built for founders — not music, but clarity. They surface agent briefings, coach your focus, and filter the noise so you can stay in flow.' },
 ]
 
 const ECO = [
   { icon:'🧬', title:'Identity sync',     desc:'Every device knows who you are and what you\'re building.' },
   { icon:'🤖', title:'Agent integration', desc:'Your agents push smart alerts without distracting you.'     },
   { icon:'🎯', title:'Focus intelligence',desc:'Track deep work sessions, energy, and momentum over time.'  },
-  { icon:'🌐', title:'Ambient OS',         desc:'Wearables feed context into Yati OS automatically.'         },
+  { icon:'🌐', title:'Ambient OS',         desc:'Wearables feed context into yAtI OS automatically.'         },
 ]
 
 export default function Wearables() {
@@ -112,7 +112,7 @@ export default function Wearables() {
           <motion.h2 {...fadeUp(0)} className="font-display font-bold tracking-tight text-white mb-4" style={{ fontSize:'clamp(32px,4vw,56px)' }}>
             Start with<br /><span className="text-gradient">the ring.</span>
           </motion.h2>
-          <motion.p {...fadeUp(0.08)} className="font-body text-white/52 mb-8 text-lg">Your first step into the Yativerse ecosystem.</motion.p>
+          <motion.p {...fadeUp(0.08)} className="font-body text-white/52 mb-8 text-lg">Your first step into the yAtIverse ecosystem.</motion.p>
           <motion.div {...fadeUp(0.14)}>
             <Link to="/signal-ring" className="btn-primary">Get early access <ArrowRight className="w-4 h-4" /></Link>
           </motion.div>

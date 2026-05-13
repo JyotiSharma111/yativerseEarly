@@ -17,21 +17,21 @@ const AGENTS_MINI = [
 ]
 
 const JOURNEY = [
-  { n:'01', title:'Claim your Yati',  text:'Start with one identity layer for your goals, brand, tools, and builder context.' },
+  { n:'01', title:'Claim your yAtI',  text:'Start with one identity layer for your goals, brand, tools, and builder context.' },
   { n:'02', title:'Open the OS',      text:'Turn scattered tasks into one daily command center for priorities and progress.' },
   { n:'03', title:'Activate agents',  text:'Delegate launch, network, content, and operations to AI that knows your build.' },
   { n:'04', title:'Start up right',   text:'Ship consistently, build trust, and grow inside a system that compounds.' },
 ]
 
 const PRODUCTS = [
-  { name:'Yati Identity', eyebrow:'Core',        text:'A living profile for your founder context, brand signal, and goals.',         accent:'#605CFF', img:'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80' },
+  { name:'yAtI Identity', eyebrow:'Core',        text:'A living profile for your founder context, brand signal, and goals.',         accent:'#605CFF', img:'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80' },
   { name:'AI-1 Layer',    eyebrow:'Intelligence', text:'One AI layer connecting your tools, context, agents, and next actions.',      accent:'#C86DD7', img:'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=600&q=80' },
-  { name:'Yati OS',       eyebrow:'Workspace',    text:'A command center for goals, launches, workflows, metrics, and clarity.',      accent:'#4ECDC4', img:'https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=600&q=80' },
+  { name:'yAtI OS',       eyebrow:'Workspace',    text:'A command center for goals, launches, workflows, metrics, and clarity.',      accent:'#4ECDC4', img:'https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=600&q=80' },
   { name:'AI Agents',     eyebrow:'Execution',    text:'Specialized operators for launch, network, content, and focus workflows.',    accent:'#FF6B8A', img:'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&q=80' },
 ]
 
 const TESTIMONIALS = [
-  { q:'Yati feels like a home base for the business I am becoming. Identity, plans, and execution in one rhythm.', name:'Neha P.',   role:'Co-founder, Studio Arc', av:'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=80&q=80' },
+  { q:'yAtI feels like a home base for the business I am becoming. Identity, plans, and execution in one rhythm.', name:'Neha P.',   role:'Co-founder, Studio Arc', av:'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=80&q=80' },
   { q:'The best part is not another dashboard. The system remembers what I am building and helps me move.',        name:'Marcus L.', role:'Indie founder',           av:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80' },
 ]
 
@@ -51,7 +51,7 @@ const HERO_DEVICES = {
 
 const QUICK_LINKS = [
   { title:'Wearables', text:'Signal Ring and Thread Pendant',          href:'/wearables' },
-  { title:'Yati OS',   text:'Founder workflows and command center',    href:'/'          },
+  { title:'yAtI OS',   text:'Founder workflows and command center',    href:'/'          },
   { title:'AI Agents', text:'Launch, Network, Focus, and Brand',       href:'/agents'    },
   { title:'Community', text:'Stories, social proof, and updates',      href:'/community' },
 ]
@@ -89,8 +89,8 @@ export default function Homepage() {
             {/* Left copy */}
             <div className="max-w-2xl">
               <Link to="/agents"
-                className="inline-flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full text-xs font-mono font-medium tracking-wide border border-white/10 bg-white/[0.05] text-white/70 hover:text-white transition-colors">
-                Introducing Yati AI-1 <span className="text-brand-purple font-semibold">Explore the system →</span>
+                className="inline-flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full text-xs font-mono font-medium tracking-wide border border-white/10 bg-white/[0.05] text-[#F5C542]  hover:text-white transition-colors">
+                Introducing yAtI AI-1 <span className="text-brand-purple font-semibold">Explore the system →</span>
               </Link>
 
               <h1 className="font-display font-bold leading-[1.02] tracking-[-0.03em] text-white mb-6"
@@ -158,7 +158,7 @@ export default function Homepage() {
                   {/* Header */}
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <p className="text-[10px] font-mono uppercase tracking-widest text-white/35">Yati OS</p>
+                      <p className="text-[10px] font-mono uppercase tracking-widest text-white/35">yAtI OS</p>
                       <p className="text-sm font-semibold font-display text-white mt-0.5">Identity command</p>
                     </div>
                     <span className="w-2 h-2 rounded-full bg-brand-teal animate-pulse" />
@@ -219,11 +219,11 @@ export default function Homepage() {
                 <motion.span {...fadeUp(0)} className="kicker mb-5 inline-block">The path</motion.span>
                 <motion.h2 {...fadeUp(0.07)} className="font-display font-bold leading-tight tracking-tight text-white"
                   style={{ fontSize:'clamp(28px,3.5vw,44px)' }}>
-                  From idea energy to an operating system that compounds.
+                  From idea energy to an operating eo-system that compounds.
                 </motion.h2>
               </div>
               <motion.p {...fadeUp(0.1)} className="font-body text-base text-white/58 leading-relaxed lg:pt-14">
-                Yati gives your ambition a place to live, then adds the workflow and agent support to keep it moving.
+                yAtI gives your ambition a place to live, then adds the workflow and agent support to keep it moving.
               </motion.p>
             </div>
 
@@ -294,13 +294,13 @@ export default function Homepage() {
 
             {/* Copy */}
             <div>
-              <motion.span {...fadeUp(0)} className="kicker mb-5 inline-block">Yati OS</motion.span>
+              <motion.span {...fadeUp(0)} className="kicker mb-5 inline-block">yAtI OS</motion.span>
               <motion.h2 {...fadeUp(0.07)} className="font-display font-bold tracking-tight text-white mb-5"
                 style={{ fontSize:'clamp(28px,3.5vw,44px)' }}>
                 A command center for building the impossible, one workflow at a time.
               </motion.h2>
               <motion.p {...fadeUp(0.12)} className="font-body text-base text-white/55 leading-relaxed mb-8 max-w-md">
-                Yati replaces tab-hopping with a daily rhythm: know what matters, let agents prep the next move, and see progress without wrestling your tools.
+                yAtI replaces tab-hopping with a daily rhythm: know what matters, let agents prep the next move, and see progress without wrestling your tools.
               </motion.p>
               <motion.div {...fadeUp(0.17)}>
                 <Link to="/waitlist" className="btn-ghost">Request early access →</Link>
@@ -367,7 +367,7 @@ export default function Homepage() {
                 </motion.h2>
               </div>
               <motion.p {...fadeUp(0.1)} className="font-body text-base text-white/55 leading-relaxed lg:pt-14">
-                The brand hint stays simple: a Yati identity layer at the center, with OS and agents orbiting around it.
+                The brand hint stays simple: a yAtI identity layer at the center, with OS and agents orbiting around it.
               </motion.p>
             </div>
 

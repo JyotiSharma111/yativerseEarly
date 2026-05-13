@@ -19,7 +19,7 @@ const TIERS = [
     price:      '$49',
     period:     'one-time deposit',
     desc:       'Lock in your ring, first-day shipping, and full founder pricing.',
-    features:   ['Signal Ring at founder price','First-wave shipping priority','Free sizing kit','1 year YATIVerse OS access','Private Discord — Pioneer channel'],
+    features:   ['Signal Ring at founder price','First-wave shipping priority','Free sizing kit','1 year yAtIverse OS access','Private Discord — Pioneer channel'],
     cta:        'Claim Pioneer Spot',
     highlight:  true,
     color:      GOLD,
@@ -66,7 +66,7 @@ const TESTIMONIALS = [
 const FAQS = [
   { q:'When does the Signal Ring ship?',         a:'We\'re targeting Q4 2026 for Pioneer and Ecosystem tier. Explorer waitlist gets notified at launch.' },
   { q:'Is my deposit refundable?',               a:'Yes — fully refundable, no questions asked, any time before shipping confirmation.' },
-  { q:'What\'s included in YATIVerse OS access?', a:'Full access to Yati OS, all 4 AI agents, workflow templates, and the founder community.' },
+  { q:'What\'s included in yAtIverse OS access?', a:'Full access to yAtI OS, all 4 AI agents, workflow templates, and the founder community.' },
   { q:'Can I upgrade my tier later?',            a:'Yes. You can upgrade from Explorer to Pioneer or Ecosystem at any time before shipping.' },
   { q:'Do I need a smartphone?',                 a:'The ring pairs with iOS and Android. The companion app is where your dashboard lives.' },
 ]
@@ -156,23 +156,23 @@ export default function EarlyAccess() {
     <>
       <SEO
         title="Early Access — Reserve Your Signal Ring"
-        description="Join 1,200+ founders reserving the YATIVerse Signal Ring. Three access tiers. Fully refundable deposit. Ships Q4 2026."
+        description="Join 1,200+ founders reserving the yAtIverse Signal Ring. Three access tiers. Fully refundable deposit. Ships Q4 2026."
         path="/early-access"
-        image="https://yativerse.com/og-early-access.png"
+        image="https://yAtIverse.com/og-early-access.png"
       />
 
       {/* JSON-LD Offer Schema */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context":"https://schema.org",
         "@type":"Offer",
-        "name":"YATIVerse Signal Ring — Early Access",
-        "description":"Reserve your YATIVerse Signal Ring at founder pricing. Fully refundable. Ships Q4 2026.",
-        "url":"https://yativerse.com/early-access",
+        "name":"yAtIverse Signal Ring — Early Access",
+        "description":"Reserve your yAtIverse Signal Ring at founder pricing. Fully refundable. Ships Q4 2026.",
+        "url":"https://yAtIverse.com/early-access",
         "priceCurrency":"USD",
         "price":"49",
         "availability":"https://schema.org/PreOrder",
         "validFrom":"2026-01-01",
-        "seller":{ "@type":"Organization", "name":"YATIVerse" }
+        "seller":{ "@type":"Organization", "name":"yAtIverse" }
       })}} />
 
       {/* ── HERO ── */}
@@ -206,7 +206,7 @@ export default function EarlyAccess() {
           </motion.h1>
 
           <motion.p {...heroEntrance(0.55)} className="font-body text-lg sm:text-xl text-white/62 max-w-xl mb-8 leading-relaxed">
-            Reserve your Signal Ring, lock in founder pricing, and get full YATIVerse ecosystem access from day one.
+            Reserve your Signal Ring, lock in founder pricing, and get full yAtIverse ecosystem access from day one.
           </motion.p>
 
           {/* Social proof */}

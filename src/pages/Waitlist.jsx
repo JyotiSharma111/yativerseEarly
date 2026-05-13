@@ -8,18 +8,18 @@ import SEO     from '../components/SEO'
 import { fadeUp, fadeLeft, fadeRight } from '../lib/motion'
 
 const PERKS = [
-  { icon:'🚀', title:'Early access',      desc:'Be first into Yati OS, agents, and the full ecosystem before public launch.' },
+  { icon:'🚀', title:'Early access',      desc:'Be first into yAtI OS, agents, and the full ecosystem before public launch.' },
   { icon:'💍', title:'Founder pricing',   desc:'Waitlist members get exclusive early pricing on wearables and platform.' },
   { icon:'🤝', title:'Shape the product', desc:'Your feedback directly influences what gets built. We actually listen.' },
   { icon:'🌐', title:'Community access',  desc:'Instant entry into the private Discord for builders and founders.' },
 ]
 
 const FAQS = [
-  { q:'Is YATIVerse available right now?',   a:'We\'re in early access. Joining the waitlist puts you first in line when we open doors.' },
+  { q:'Is yAtIverse available right now?',   a:'We\'re in early access. Joining the waitlist puts you first in line when we open doors.' },
   { q:'What does it cost?',                  a:'We\'ll share pricing with waitlist members first. Expect founder-friendly tiers for early-stage builders.' },
-  { q:'Do I need the wearables?',            a:'No. You can start with Yati OS and AI agents. Wearables deepen the experience but aren\'t required.' },
+  { q:'Do I need the wearables?',            a:'No. You can start with yAtI OS and AI agents. Wearables deepen the experience but aren\'t required.' },
   { q:'What happens after I join?',          a:'Confirmation email, access to our private Discord, and early updates on launch timing.' },
-  { q:'Who is YATIVerse built for?',         a:'Ambitious people aged 16–30: solo founders, creators, operators, students with big ideas, and digital-native builders.' },
+  { q:'Who is yAtIverse built for?',         a:'Ambitious people aged 16–30: solo founders, creators, operators, students with big ideas, and digital-native builders.' },
 ]
 
 const AVATARS = [
@@ -40,7 +40,7 @@ export default function Waitlist() {
 
   return (
     <>
-      <SEO title="Join the Waitlist — Early Access" description="Join 1,200+ founders on the YATIVerse waitlist. Get early access to Yati OS, AI agents, and wearable hardware before public launch." path="/waitlist" />
+      <SEO title="Join the Waitlist — Early Access" description="Join 1,200+ founders on the yAtIverse waitlist. Get early access to yAtI OS, AI agents, and wearable hardware before public launch." path="/waitlist" />
       <div className="bg-brand-bg text-white min-h-screen">
         <Navbar />
 
@@ -52,10 +52,10 @@ export default function Waitlist() {
             <div>
               <motion.span {...fadeUp(0)} className="kicker mb-6 inline-block">Early access</motion.span>
               <motion.h1 {...fadeUp(0.07)} className="font-display font-bold tracking-[-0.04em] leading-[0.97] mb-5 text-white" style={{ fontSize:'clamp(38px,5.5vw,68px)' }}>
-                Start up right<br />inside the<br /><span className="text-gradient">Yati-Verse.</span>
+                Start up right<br />inside the<br /><span className="text-gradient">yAtI-Verse.</span>
               </motion.h1>
               <motion.p {...fadeUp(0.13)} className="font-body text-base text-white/55 leading-relaxed mb-7">
-                Join the waitlist for Yati OS, AI-1 agents, wearable hardware, and a community of builders who don't build alone.
+                Join the waitlist for yAtI OS, AI-1 agents, wearable hardware, and a community of builders who don't build alone.
               </motion.p>
 
               {/* Social proof */}
@@ -91,7 +91,7 @@ export default function Waitlist() {
                     </div>
                     <p className="font-display font-bold text-2xl text-white mb-2">You're in.</p>
                     <p className="font-body text-sm text-white/52 leading-relaxed">
-                      Welcome to YATIVerse, {form.name.split(' ')[0]}.<br />Check your inbox — we'll be in touch.
+                      Welcome to yAtIverse, {form.name.split(' ')[0]}.<br />Check your inbox — we'll be in touch.
                     </p>
                   </div>
                 ) : (
@@ -123,7 +123,7 @@ export default function Waitlist() {
                         </select>
                       </div>
                       <button type="submit" className="btn-primary w-full justify-center !py-4 !text-sm mt-2">
-                        Join the Yati-Verse <ArrowRight className="w-4 h-4" />
+                        Join the yAtI-Verse <ArrowRight className="w-4 h-4" />
                       </button>
                       <p className="text-[11px] font-body text-white/26 text-center">No spam. Unsubscribe anytime.</p>
                     </form>

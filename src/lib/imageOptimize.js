@@ -1,5 +1,5 @@
 /**
- * YATIVerse image optimization helpers
+ * yAtIverse image optimization helpers
  * Use these instead of raw Unsplash URLs for better performance.
  */
 

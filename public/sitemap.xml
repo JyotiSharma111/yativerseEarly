@@ -3,68 +3,68 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 
   <url>
-    <loc>https://yativerse.com/</loc>
+    <loc>https://yAtIverse.com/</loc>
     <lastmod>2026-05-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://yativerse.com/og-image.png</image:loc>
-      <image:title>YATIVerse — Start Up Right</image:title>
+      <image:loc>https://yAtIverse.com/og-image.png</image:loc>
+      <image:title>yAtIverse — Start Up Right</image:title>
     </image:image>
   </url>
 
   <url>
-    <loc>https://yativerse.com/signal-ring</loc>
+    <loc>https://yAtIverse.com/signal-ring</loc>
     <lastmod>2026-05-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
     <image:image>
-      <image:loc>https://yativerse.com/og-signal-ring.png</image:loc>
-      <image:title>YATIVerse Signal Ring — Wear the Signal</image:title>
+      <image:loc>https://yAtIverse.com/og-signal-ring.png</image:loc>
+      <image:title>yAtIverse Signal Ring — Wear the Signal</image:title>
     </image:image>
   </url>
 
   <url>
-    <loc>https://yativerse.com/early-access</loc>
+    <loc>https://yAtIverse.com/early-access</loc>
     <lastmod>2026-05-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
     <image:image>
-      <image:loc>https://yativerse.com/og-early-access.png</image:loc>
-      <image:title>YATIVerse Early Access — Reserve Your Signal Ring</image:title>
+      <image:loc>https://yAtIverse.com/og-early-access.png</image:loc>
+      <image:title>yAtIverse Early Access — Reserve Your Signal Ring</image:title>
     </image:image>
   </url>
 
   <url>
-    <loc>https://yativerse.com/wearables</loc>
+    <loc>https://yAtIverse.com/wearables</loc>
     <lastmod>2026-05-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
 
   <url>
-    <loc>https://yativerse.com/agents</loc>
+    <loc>https://yAtIverse.com/agents</loc>
     <lastmod>2026-05-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
 
   <url>
-    <loc>https://yativerse.com/journey</loc>
+    <loc>https://yAtIverse.com/journey</loc>
     <lastmod>2026-05-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
 
   <url>
-    <loc>https://yativerse.com/community</loc>
+    <loc>https://yAtIverse.com/community</loc>
     <lastmod>2026-05-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
 
   <url>
-    <loc>https://yativerse.com/waitlist</loc>
+    <loc>https://yAtIverse.com/waitlist</loc>
     <lastmod>2026-05-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.80</priority>

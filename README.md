@@ -1,4 +1,4 @@
-# YATIVerse Website
+# yAtIverse Website
 
 **Start Up Right. Every tool a founder needs, in one place.**
 
@@ -8,8 +8,8 @@
 
 ```bash
 # 1. Extract
-tar -xzf yativerse.tar.gz
-cd yativerse
+tar -xzf yAtIverse.tar.gz
+cd yAtIverse
 
 # 2. Install dependencies
 npm install
@@ -58,7 +58,7 @@ your link on X, LinkedIn, WhatsApp etc.
 ## File Structure
 
 ```
-yativerse/
+yAtIverse/
 ├── public/
 │   ├── logo.png              ← ADD THIS (your logo)
 │   ├── favicon-32.png        ← ADD THIS
@@ -102,8 +102,8 @@ yativerse/
 - ✅ Apple touch icon
 
 **Before going live, update in `index.html`:**
-- `https://yativerse.com` → your actual domain
-- `@yativerse` → your actual Twitter/X handle
+- `https://yAtIverse.com` → your actual domain
+- `@yAtIverse` → your actual Twitter/X handle
 
 ---
 

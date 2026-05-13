@@ -9,14 +9,14 @@ import { fadeUp, fadeLeft, fadeRight } from '../lib/motion'
 const T = { purple:'#605CFF', pink:'#C86DD7', teal:'#4ECDC4', rose:'#FF6B8A' }
 
 const STEPS = [
-  { n:'01', title:'Claim your Yati',  sub:'Identity is the foundation.',      color:T.purple, img:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=1000&q=80', desc:'Before tools, before tactics — you need clarity on who you are and what you\'re building. Your Yati identity layer captures your goals, builder context, brand signal, and vision. Everything else connects to this.', outcomes:['Personal brand clarity','Goal architecture','Agent context set','Founder fingerprint'] },
-  { n:'02', title:'Open the OS',      sub:'Turn chaos into one daily rhythm.',  color:T.pink,   img:'https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1000&q=80', desc:'Yati OS becomes your command center. Instead of switching between 12 tools, you have one place for priorities, launches, meetings, and progress. Every agent feeds into it. Every wearable connects through it.',         outcomes:['Single command center','Daily workflow rhythm','Progress visibility','Agent integration'] },
+  { n:'01', title:'Claim your yAtI',  sub:'Identity is the foundation.',      color:T.purple, img:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=1000&q=80', desc:'Before tools, before tactics — you need clarity on who you are and what you\'re building. Your yAtI identity layer captures your goals, builder context, brand signal, and vision. Everything else connects to this.', outcomes:['Personal brand clarity','Goal architecture','Agent context set','Founder fingerprint'] },
+  { n:'02', title:'Open the OS',      sub:'Turn chaos into one daily rhythm.',  color:T.pink,   img:'https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1000&q=80', desc:'yAtI OS becomes your command center. Instead of switching between 12 tools, you have one place for priorities, launches, meetings, and progress. Every agent feeds into it. Every wearable connects through it.',         outcomes:['Single command center','Daily workflow rhythm','Progress visibility','Agent integration'] },
   { n:'03', title:'Activate agents',  sub:'Build without a full team.',         color:T.teal,   img:'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1000&q=80', desc:'Launch Agent validates your idea. Network Agent maps your people. Focus Agent guards your time. Brand Agent builds your presence. They collaborate — so you can focus on the work only you can do.',                   outcomes:['AI-powered execution','Workflow automation','Strategic guidance','Compounding momentum'] },
-  { n:'04', title:'Start up right',   sub:'Build a system that compounds.',     color:T.rose,   img:'https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=1000&q=80', desc:'The Yativerse isn\'t just about moving fast — it\'s about building right. Consistent shipping, trust-building, brand growth, and execution discipline compound week over week into something unstoppable.',              outcomes:['Consistent shipping','Brand compound growth','Scalable execution','Founder resilience'] },
+  { n:'04', title:'Start up right',   sub:'Build a system that compounds.',     color:T.rose,   img:'https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=1000&q=80', desc:'The yAtIverse isn\'t just about moving fast — it\'s about building right. Consistent shipping, trust-building, brand growth, and execution discipline compound week over week into something unstoppable.',              outcomes:['Consistent shipping','Brand compound growth','Scalable execution','Founder resilience'] },
 ]
 
 const TIMELINE = [
-  { p:'Week 1–2', t:'Identity layer',   d:'Set up Yati profile, define goals, configure agents.' },
+  { p:'Week 1–2', t:'Identity layer',   d:'Set up yAtI profile, define goals, configure agents.' },
   { p:'Week 3–4', t:'First workflow',   d:'OS daily rhythm live. Launch agent validates your idea.' },
   { p:'Month 2',  t:'Agent activation', d:'All 4 agents running. First content, first outreach.' },
   { p:'Month 3+', t:'Ecosystem build',  d:'Compounding. Wearables integrated. Brand growing.' },
@@ -25,7 +25,7 @@ const TIMELINE = [
 export default function Journey() {
   return (
     <>
-      <SEO title="The Journey — From Idea to Operating System" description="Four steps. One connected ecosystem. Claim your Yati, open the OS, activate agents, and start up right." path="/journey" />
+      <SEO title="The Journey — From Idea to operating eo-system" description="Four steps. One connected ecosystem. Claim your yAtI, open the OS, activate agents, and start up right." path="/journey" />
       <div className="bg-brand-bg text-white min-h-screen">
         <Navbar />
 
@@ -34,7 +34,7 @@ export default function Journey() {
           <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 65% 55% at 50% 0%, rgba(96,92,255,.13), transparent 65%)' }} />
           <motion.span {...fadeUp(0)} className="kicker mb-6 inline-block">The path</motion.span>
           <motion.h1 {...fadeUp(0.07)} className="font-display font-bold tracking-[-0.04em] leading-[0.96] mb-6 text-white" style={{ fontSize:'clamp(44px,7vw,88px)' }}>
-            From idea<br />to <span className="text-gradient">operating system.</span>
+            From idea<br />to <span className="text-gradient">operating eo-system.</span>
           </motion.h1>
           <motion.p {...fadeUp(0.13)} className="font-body text-lg text-white/55 max-w-lg mx-auto leading-relaxed">
             Four steps. One connected ecosystem. A rhythm that compounds every single week.
