@@ -73,7 +73,7 @@ const MEGA = {
 };
 
 const NAV_LINKS = [
-  { label: "yAtI", href: "/yAtI", highlight: true },
+  { label: "yAtI- Your Story", href: "/yAtI", highlight: true },
   { label: "Wearables", href: "/wearables", mega: "wearables" },
   { label: "Agents", href: "/agents", mega: "agents" },
   { label: "Journey", href: "/journey" },
