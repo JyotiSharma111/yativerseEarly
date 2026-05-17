@@ -18,7 +18,7 @@ const fadeUp = (delay = 0) => ({
 const SECTIONS = [
   {
     number: "01",
-    eyebrow: "Walks Its Own Path",
+    eyebrow: "Walks Your Own Path",
     title: ["Followers optimize.", "Founders pioneer."],
     body: "Founders create categories, behaviors, and entirely new directions. They move before there is a trail to follow.",
     quote: "Invisible today. Unstoppable tomorrow.",

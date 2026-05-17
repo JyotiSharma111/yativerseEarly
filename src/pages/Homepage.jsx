@@ -219,7 +219,7 @@ export default function Homepage() {
                 <motion.span {...fadeUp(0)} className="kicker mb-5 inline-block">The path</motion.span>
                 <motion.h2 {...fadeUp(0.07)} className="font-display font-bold leading-tight tracking-tight text-white"
                   style={{ fontSize:'clamp(28px,3.5vw,44px)' }}>
-                  From idea energy to an operating eo-system that compounds.
+                  From idea energy to an operating eco-system that compounds.
                 </motion.h2>
               </div>
               <motion.p {...fadeUp(0.1)} className="font-body text-base text-white/58 leading-relaxed lg:pt-14">
@@ -379,7 +379,7 @@ export default function Homepage() {
               ].map((a, i) => (
                 <motion.div key={a.title} {...fadeUp(i * 0.08)}
                   className="glass rounded-[1.75rem] overflow-hidden hover:border-white/14 transition-colors duration-300">
-                  <img src={a.img} alt={a.title} className="w-full h-44 object-cover" loading="lazy" />
+                  <img src={a.img} alt={a.title} className="w-full h-44 object-cover object-[30%_40%]" loading="lazy" />
                   <div className="p-6">
                     <h3 className="font-display font-semibold text-base text-white mb-2">{a.title}</h3>
                     <p className="font-body text-sm text-white/55 leading-relaxed">{a.text}</p>
