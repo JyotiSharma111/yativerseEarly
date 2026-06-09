@@ -33,7 +33,7 @@ export default function Wearables() {
           <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(96,92,255,.14), transparent 65%)' }} />
           <motion.span {...fadeUp(0)} className="kicker mb-6 inline-block">Hardware</motion.span>
           <motion.h1 {...fadeUp(0.07)} className="font-display font-bold tracking-[-0.04em] leading-[0.96] mb-6 text-white" style={{ fontSize:'clamp(44px,7vw,92px)' }}>
-            Wear your<br /><span className="text-gradient">intelligence.</span>
+            Distinguished Intelligence,<br /><span className="text-gradient">Leadership Empowered.</span>
           </motion.h1>
           <motion.p {...fadeUp(0.13)} className="font-body text-lg text-white/58 max-w-lg mx-auto mb-10 leading-relaxed">
             Devices designed for founders. Wearables that connect identity, focus, and AI into one ambient layer.

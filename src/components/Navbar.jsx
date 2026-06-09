@@ -36,7 +36,7 @@ const MEGA = {
     cta: { label: "Shop all wearables", href: "/wearables" },
   },
   agents: {
-    eyebrow: "AI Workforce",
+    eyebrow: "Your AI C-Suite",
     headline: "Your invisible executive team.",
     items: [
       {

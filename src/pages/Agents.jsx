@@ -36,7 +36,7 @@ export default function Agents() {
         {/* Hero */}
         <section className="relative pt-40 pb-24 text-center overflow-hidden px-4">
           <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 70% 55% at 50% 0%, rgba(200,109,215,.13), transparent 65%)' }} />
-          <motion.span {...fadeUp(0)} className="kicker mb-6 inline-block">AI Workforce</motion.span>
+          <motion.span {...fadeUp(0)} className="kicker mb-6 inline-block">Your AI C-Suite</motion.span>
           <motion.h1 {...fadeUp(0.07)} className="font-display font-bold tracking-[-0.04em] leading-[0.96] mb-6 text-white" style={{ fontSize:'clamp(44px,7vw,92px)' }}>
             Your invisible<br /><span className="text-gradient">executive team.</span>
           </motion.h1>
