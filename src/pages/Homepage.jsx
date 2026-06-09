@@ -326,6 +326,7 @@ export default function Homepage() {
         title="yAtIverse — AI-Powered Founder OS & Wearables for Solo Builders"
         description="yAtIverse gives solo founders a wearable Signal Ring, AI agents, and a Founder OS to plan, build, and ship — always working, never sleeping."
         canonical="https://yativerse.com/"
+        ogImage="https://yativerse.com/og-image.png"  
       />
 
       <div className="bg-brand-bg text-white min-h-screen">
