@@ -52,7 +52,7 @@ const SOCIAL = [
 
 export default function Footer() {
   const [email, setEmail] = useState("");
-  const [done, setDone] = useState(false);
+  const [status, setStatus] = useState("idle"); // idle | loading | success | error
 
   return (
     <footer className="relative bg-[#020510] border-t border-white/[0.06] pt-20 pb-10 overflow-hidden">
@@ -103,34 +103,62 @@ export default function Footer() {
             <p className="text-[11px] font-mono tracking-[0.13em] uppercase text-white/30 mb-2">
               Stay in the loop
             </p>
-            {done ? (
+
+            {/* ------------------ FIXED FORM BLOCK ------------------ */}
+            {status === "success" ? (
               <p className="text-sm text-brand-teal font-body py-2">
                 ✓ You're on the list.
               </p>
             ) : (
-              <form
-                className="flex gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (email) setDone(true);
-                }}
-              >
-                <input
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="flex-1 min-w-0 bg-white/[0.05] border border-white/10 rounded-full px-4 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-brand-purple/50 transition-colors font-body"
-                />
-                <button
-                  type="submit"
-                  className="btn-primary !py-2 !px-4 !text-xs flex-shrink-0"
+              <>
+                <form
+                  className="flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setStatus("loading");
+
+                    fetch("https://formspree.io/f/mykankad", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email }),
+                    })
+                      .then((res) => {
+                        if (res.ok) {
+                          setStatus("success");
+                          setEmail("");
+                        } else {
+                          setStatus("error");
+                        }
+                      })
+                      .catch(() => setStatus("error"));
+                  }}
                 >
-                  Subscribe
-                </button>
-              </form>
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="flex-1 min-w-0 bg-white/[0.05] border border-white/10 rounded-full px-4 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-brand-purple/50 transition-colors font-body"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={status === "loading"}
+                    className="btn-primary !py-2 !px-4 !text-xs flex-shrink-0 disabled:opacity-50"
+                  >
+                    {status === "loading" ? "Sending..." : "Subscribe"}
+                  </button>
+                </form>
+
+                {status === "error" && (
+                  <p className="text-[12px] text-red-400 mt-2 font-body">
+                    Something went wrong. Try again.
+                  </p>
+                )}
+              </>
             )}
+            {/* ------------------------------------------------------ */}
 
             <div className="flex gap-2.5 mt-5">
               {SOCIAL.map((s) => (
