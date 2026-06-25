@@ -357,7 +357,7 @@ export default function Homepage() {
             </h1>
 
             <p className="font-body text-lg text-white/60 max-w-xl mx-auto leading-relaxed mb-8">
-              Your invisible digital C-suite — wearables, AI agents, and Founder OS — always working, never sleeping.
+              Your digital C-suite — wearables, AI agents, and Founder OS — always working, never sleeping.
             </p>
 
             {/* Avatars — TIER 2: above fold, not LCP, 60px, eager/low */}
