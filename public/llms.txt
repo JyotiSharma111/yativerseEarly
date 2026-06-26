@@ -1,0 +1,45 @@
+# yAtIverse
+
+> Start Up Right. Every tool a founder needs, in one place.
+
+yAtIverse is an AI-native ecosystem for ambitious solo founders and builders.
+It combines AI-connected wearables, intelligent agents, and a Founder OS into
+one unified system — always working, never sleeping.
+
+## Products
+
+- Signal Ring: A smart wearable that tracks founder focus, biometrics, and work state
+- Thread Pendant: A second wearable for passive context and presence signaling
+- yAtI OS: A personal command center for goals, launches, workflows, and daily priorities
+- AI Agents: Four specialized agents (Launch, Network, Focus, Brand) that run autonomously
+
+## Key pages
+
+- [Home](https://yativerse.ai/): Product overview and waitlist signup
+- [AI Agents](https://yativerse.ai/agents): The invisible team — Launch, Network, Focus, Brand agents
+- [yAtI OS](https://yativerse.ai/os): Founder OS command center details
+- [Wearables](https://yativerse.ai/wearables): Signal Ring and Thread Pendant
+- [Waitlist](https://yativerse.ai/waitlist): Early access signup — limited spots
+
+## Audience
+
+Built for first-time founders, solo operators, and vision-led creators who need
+the infrastructure of a full team without hiring one.
+
+## Status
+
+Currently in early access. Waitlist open at https://yativerse.ai/waitlist
+Signal Ring targeting Q4 2026 for early access members. All deposits refundable.
+Pioneer tier starts at $49 deposit.
+
+## Contact
+
+Website: https://yativerse.ai
+Twitter/X: https://x.com/yAtIverse
+Instagram: https://instagram.com/yAtIverse
+LinkedIn: https://linkedin.com/company/yAtIverse
+YouTube: https://youtube.com/@yAtIverse
+
+## No public API
+
+No public API available yet. Integrations are managed through the yAtI OS dashboard.

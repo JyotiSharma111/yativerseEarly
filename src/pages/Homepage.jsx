@@ -4,53 +4,25 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import SEO from "../components/SEO";
 
-// ─────────────────────────────────────────────────────────────
-// IMAGE OPTIMIZATION STRATEGY
-//
-// LCP target: hero strip poster images (3× <video poster=>)
-//
-// Every image is served from Unsplash CDN which auto-negotiates
-// WebP/AVIF via ?auto=format. We provide two srcset widths so the
-// browser picks the smallest sufficient size per viewport.
-//
-// Loading priority tiers:
-//   TIER 1 – Hero strip posters  → preloaded in useLayoutEffect (sync, pre-paint)
-//                                   fetchpriority="high", decoding="async"
-//   TIER 2 – Avatars (above fold) → loading="eager", fetchpriority="low"
-//   TIER 3 – OS / Agents / Audience (below fold)
-//                                 → loading="lazy", decoding="async"
-//
-// srcset helpers produce two breakpoints (1× mobile, 2× desktop).
-// sizes= tells the browser the rendered width at each breakpoint so
-// it picks the right source before layout is known.
-// ─────────────────────────────────────────────────────────────
-
 const B = "https://gktcrehhhixfgwkixamg.supabase.co/storage/v1/object/public/yati/";
 const U = "https://images.unsplash.com/";
 
-// Unsplash srcset helper — returns "url 300w, url 600w" etc.
-// auto=format → WebP/AVIF negotiation. fit=crop preserves aspect ratio.
 function uSrc(id, w)    { return `${U}${id}?auto=format&fit=crop&w=${w}&q=80`; }
 function uSrcset(id, widths) {
   return widths.map((w) => `${uSrc(id, w)} ${w}w`).join(", ");
 }
 
-// ── GIF sources (looping mp4 — same motion, 15× smaller than .gif) ──
 const GIF = {
   morning:    B + "morning.mp4",
   withAgents: B + "Founder_with_AI_agents_202605291326.mp4",
   deepWork:   B + "deep_work.mp4",
 };
 
-// ── Poster images for each GIF card (TIER 1 — LCP candidates) ──
-// These are the visible elements while the video decodes.
-// Preloaded synchronously in useLayoutEffect before first paint.
 const POSTER_ID = {
   morning:    "photo-1506784983877-45594efa4cbe",
   withAgents: "photo-1551434678-e076c223a692",
   deepWork:   "photo-1498050108023-c5249f4df085",
 };
-// Default src (desktop). Srcset serves 300w on mobile, 600w on desktop.
 const POSTER = {
   morning:    uSrc(POSTER_ID.morning,    600),
   withAgents: uSrc(POSTER_ID.withAgents, 600),
@@ -61,11 +33,8 @@ const POSTER_SRCSET = {
   withAgents: uSrcset(POSTER_ID.withAgents, [300, 600]),
   deepWork:   uSrcset(POSTER_ID.deepWork,   [300, 600]),
 };
-// Hero strip is a 3-col grid; each card is ~33vw on desktop, ~33vw on tablet,
-// ~33vw on mobile (it stays 3-col). 300w is enough for mobile cards (~125px).
 const POSTER_SIZES = "(max-width: 768px) 33vw, 300px";
 
-// ── Static images (TIER 3 — all below fold, lazy) ──
 const IMG_ID = {
   osPreview:        "photo-1551288049-bebda4e38f71",
   agentLaunch:      "photo-1519389950473-47ba0277781c",
@@ -77,18 +46,10 @@ const IMG_ID = {
   audienceCreator:  "photo-1611532736597-de2d4265fba3",
 };
 
-// Agent cards: 4-col desktop (~296px), 2-col tablet (~50vw), 1-col mobile (100vw)
-// Serve 400w (desktop) and 200w (mobile) — browser picks via sizes=
-const AGENT_SIZES   = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw";
-
-// Audience cards: 3-col desktop (~413px), 1-col mobile (100vw)
-// Serve 800w (mobile full-bleed) and 500w (desktop column)
+const AGENT_SIZES    = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw";
 const AUDIENCE_SIZES = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw";
+const OS_SIZES       = "(max-width: 1024px) 100vw, 50vw";
 
-// OS preview: half-width desktop column (~50vw), full on mobile
-const OS_SIZES = "(max-width: 1024px) 100vw, 50vw";
-
-// ── Avatar images (TIER 2 — above fold, not LCP, 60px) ──
 const AVATARS = [
   uSrc("photo-1534528741775-53994a69daeb", 60),
   uSrc("photo-1506794778202-cad84cf45f1d", 60),
@@ -96,7 +57,6 @@ const AVATARS = [
   uSrc("photo-1500648767791-00dcc994a43e", 60),
 ];
 
-// ── DATA ──────────────────────────────────────────────────────
 const SIGNALS = [
   "Identity synced",
   "Launch plan ready",
@@ -153,44 +113,21 @@ const QUICK_LINKS = [
   { title:"Community", text:"Founders who get it",           href:"/community" },
 ];
 
-const JSON_LD = {
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "yAtIverse",
-  "applicationCategory": "BusinessApplication",
-  "description": "AI-powered Founder OS with wearables and AI agents for solo founders and builders.",
-  "operatingSystem": "Web",
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "url": "https://yativerse.com",
-};
-
 // ── HELPERS ──────────────────────────────────────────────────
 
-/**
- * GifVid — looping mp4 with a static poster for instant first-frame paint.
- *
- * The <video poster=> attribute has no fetchpriority API, so we pair it with
- * a visually-identical hidden <img> that the browser CAN prioritize for preload.
- * The img is position:absolute, opacity:0, pointer-events:none — invisible to
- * the user but fetchable by the browser at high priority. Once the video loads
- * its first frame, the poster and hidden img become irrelevant.
- *
- * eager=true  → preload="metadata" + hidden img with fetchpriority="high"
- * eager=false → preload="none"     (below fold, no rush)
- */
 function GifVid({ src, poster, posterSrcset, posterSizes, alt = "", className = "", style = {}, eager = false }) {
   return (
     <div className="relative w-full h-full">
+      {/* FIX 5: decorative videos get aria-hidden so screen readers skip them */}
       <video
         src={src}
         poster={poster}
         autoPlay muted loop playsInline
         preload={eager ? "metadata" : "none"}
+        aria-hidden="true"
         className={`${className} relative z-10`}
         style={style}
       />
-      {/* Hidden img gives browser a fetchpriority handle on the poster.
-          aria-hidden + tabIndex=-1 = invisible to AT and keyboard. */}
       {eager && (
         <img
           src={poster}
@@ -209,39 +146,13 @@ function GifVid({ src, poster, posterSrcset, posterSizes, alt = "", className = 
   );
 }
 
-/**
- * Img — responsive image with srcset + sizes.
- * Always decoding="async" (never blocks main thread).
- * Explicit width/height prevent CLS.
- */
-function Img({
-  id,                        // Unsplash photo ID
-  widths = [400, 800],       // srcset breakpoints
-  sizes = "100vw",           // CSS sizes= string
-  alt,
-  className = "",
-  style = {},
-  loading = "lazy",
-  fetchpriority = "auto",
-  width,
-  height,
-}) {
-  const src    = uSrc(id, widths[widths.length - 1]);   // largest as fallback
+function Img({ id, widths = [400, 800], sizes = "100vw", alt, className = "", style = {},
+               loading = "lazy", fetchpriority = "auto", width, height }) {
+  const src    = uSrc(id, widths[widths.length - 1]);
   const srcset = uSrcset(id, widths);
   return (
-    <img
-      src={src}
-      srcSet={srcset}
-      sizes={sizes}
-      alt={alt}
-      className={className}
-      style={style}
-      loading={loading}
-      fetchpriority={fetchpriority}
-      decoding="async"                                   // always async — never blocks thread
-      width={width}
-      height={height}
-    />
+    <img src={src} srcSet={srcset} sizes={sizes} alt={alt} className={className} style={style}
+      loading={loading} fetchpriority={fetchpriority} decoding="async" width={width} height={height} />
   );
 }
 
@@ -272,43 +183,6 @@ export default function Homepage() {
   const [activeTimeline, setActiveTimeline] = useState(0);
   const signal = useMemo(() => SIGNALS[sig], [sig]);
 
-  // ── useLayoutEffect — runs synchronously before paint ──────
-  // This is the correct hook for injecting <link rel="preload"> tags
-  // because it fires before the browser's first paint, giving the
-  // preloader time to act before layout is committed.
-  // (useEffect fires AFTER paint — too late for LCP preloads.)
-  useLayoutEffect(() => {
-    // Preload all 3 poster images at high priority — these ARE the LCP elements
-    Object.values(POSTER).forEach((href) => {
-      if (document.querySelector(`link[rel="preload"][href="${href}"]`)) return;
-      const l = document.createElement("link");
-      l.rel  = "preload";
-      l.as   = "image";
-      l.href = href;
-      l.setAttribute("fetchpriority", "high");
-      // Also hint the mobile-size srcset so the browser picks 300w on narrow viewports
-      document.head.insertBefore(l, document.head.firstChild); // insert at TOP of <head>
-    });
-
-    // Preload the 2 most-visible hero video sources (not the CTA one)
-    [GIF.morning, GIF.withAgents].forEach((href) => {
-      if (document.querySelector(`link[rel="preload"][href="${href}"]`)) return;
-      const l = document.createElement("link");
-      l.rel  = "preload";
-      l.as   = "video";
-      l.href = href;
-      document.head.appendChild(l);
-    });
-
-    // JSON-LD structured data
-    if (!document.querySelector('script[type="application/ld+json"]')) {
-      const s = document.createElement("script");
-      s.type = "application/ld+json";
-      s.text = JSON.stringify(JSON_LD);
-      document.head.appendChild(s);
-    }
-  }, []);                                                // empty deps — runs once, sync
-
   useEffect(() => {
     const id = setInterval(() => setSig((p) => (p + 1) % SIGNALS.length), 2500);
     return () => clearInterval(id);
@@ -325,12 +199,15 @@ export default function Homepage() {
         path="/"
         title="yAtIverse — AI-Powered Founder OS & Wearables for Solo Builders"
         description="yAtIverse gives solo founders a wearable Signal Ring, AI agents, and a Founder OS to plan, build, and ship — always working, never sleeping."
-        canonical="https://yativerse.com/"
-        ogImage="https://yativerse.com/og-image.png"  
+        canonical="https://yativerse.ai/"
+        ogImage="https://yativerse.ai/og-image.png"
       />
 
+      {/* FIX 1: outer div is just a layout shell, <main> wraps all page content */}
       <div className="bg-brand-bg text-white min-h-screen">
         <Navbar />
+
+        <main>
 
         {/* ══════════════════════════════════════════
             HERO
@@ -339,7 +216,6 @@ export default function Homepage() {
           aria-label="yAtIverse founder operating system"
           className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-20 overflow-hidden"
         >
-          {/* Pure CSS ambient glow — zero network cost */}
           <div aria-hidden="true" className="absolute inset-0 z-0 pointer-events-none"
             style={{ background: "radial-gradient(ellipse 80% 55% at 50% 30%, rgba(96,92,255,0.14) 0%, transparent 68%), radial-gradient(ellipse 45% 35% at 72% 72%, rgba(200,109,215,0.08) 0%, transparent 60%)" }} />
 
@@ -360,7 +236,6 @@ export default function Homepage() {
               Your digital C-suite — wearables, AI agents, and Founder OS — always working, never sleeping.
             </p>
 
-            {/* Avatars — TIER 2: above fold, not LCP, 60px, eager/low */}
             <div className="flex items-center justify-center gap-3 mb-8">
               <div className="flex" aria-hidden="true">
                 {AVATARS.map((s, i) => (
@@ -374,20 +249,23 @@ export default function Homepage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2.5 justify-center mb-10" role="list" aria-label="yAtIverse products">
+            {/* FIX 2: was role="list" on a div with role="listitem" divs inside —
+                valid, but Lighthouse flagged it. Switched to a real <ul>/<li>. */}
+            <ul className="flex flex-wrap gap-2.5 justify-center mb-10 list-none"
+                aria-label="yAtIverse products">
               {[
                 { dot:"#605CFF", label:"Signal Ring — Wearable"     },
                 { dot:"#C86DD7", label:"Founder OS — Command Center" },
                 { dot:"#FF6B8A", label:"AI Agents — Invisible Team"  },
               ].map((tab) => (
-                <div key={tab.label} role="listitem"
+                <li key={tab.label}
                   className="inline-flex items-center gap-2 bg-white/[0.05] border border-white/[0.08] px-3.5 py-1.5 rounded-full text-xs font-body text-white/60">
                   <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                     style={{ background:tab.dot, boxShadow:`0 0 6px ${tab.dot}` }} />
                   {tab.label}
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
 
             <div className="flex flex-wrap gap-3 justify-center mb-10">
               <Link to="/waitlist" className="btn-primary">Join Waitlist →</Link>
@@ -397,14 +275,11 @@ export default function Homepage() {
             <p className="text-xs text-white/35 font-body">Early access · Limited spots available</p>
           </div>
 
-          {/* ── 3 GIF cards (TIER 1 — LCP) ──────────────────────────
-              Each GifVid renders:
-                <video poster={POSTER} preload="metadata" autoplay muted loop>
-                <img   src={POSTER} fetchpriority="high" hidden aria-hidden>
-              The hidden img is the browser's high-priority fetch handle.
-              The poster on the video shows the image without JS if video fails.   */}
-          <div className="relative z-10 w-full max-w-4xl mx-auto mt-16 px-4"
-            aria-label="yAtIverse founder lifestyle previews">
+          {/* FIX 3: plain div → <section> so aria-label is valid on a landmark role */}
+          <section
+            aria-label="yAtIverse founder lifestyle previews"
+            className="relative z-10 w-full max-w-4xl mx-auto mt-16 px-4"
+          >
             <div className="grid grid-cols-3 gap-4">
               {[
                 { src:GIF.morning,    poster:POSTER.morning,    srcset:POSTER_SRCSET.morning,    label:"Morning ritual",   alt:"Founder starting their morning ritual at desk" },
@@ -430,7 +305,7 @@ export default function Homepage() {
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         </section>
 
         {/* ── QUICK LINKS ── */}
@@ -447,7 +322,7 @@ export default function Homepage() {
         </nav>
 
         {/* ══════════════════════════════════════════
-            JOURNEY — numbered CSS cards, zero images
+            JOURNEY
         ══════════════════════════════════════════ */}
         <section className="py-20 px-6 border-t border-white/[0.06]" id="journey"
           aria-labelledby="journey-heading">
@@ -466,26 +341,31 @@ export default function Homepage() {
                 </p>
               </Reveal>
             </div>
+            {/* FIX 4: <ol> must contain <li> directly — Reveal was a div wrapper
+                between ol and li, which Lighthouse flags as invalid list markup.
+                Moved the Reveal wrapper inside the <li> instead. */}
             <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {JOURNEY.map((item, i) => (
-                <Reveal key={item.title} delay={i * 0.07}>
-                  <li className="glass rounded-2xl p-6 hover:border-white/14 transition-colors duration-300 h-full">
-                    <span aria-hidden="true"
-                      className="block font-mono text-4xl font-bold mb-4 leading-none"
-                      style={{ color:"rgba(96,92,255,0.35)" }}>
-                      {item.n}
-                    </span>
-                    <h3 className="font-display font-semibold text-base text-white mb-2">{item.title}</h3>
-                    <p className="font-body text-sm text-white/50 leading-relaxed">{item.text}</p>
-                  </li>
-                </Reveal>
+                <li key={item.title}>
+                  <Reveal delay={i * 0.07}>
+                    <div className="glass rounded-2xl p-6 hover:border-white/14 transition-colors duration-300 h-full">
+                      <span aria-hidden="true"
+                        className="block font-mono text-4xl font-bold mb-4 leading-none"
+                        style={{ color:"rgba(96,92,255,0.35)" }}>
+                        {item.n}
+                      </span>
+                      <h3 className="font-display font-semibold text-base text-white mb-2">{item.title}</h3>
+                      <p className="font-body text-sm text-white/50 leading-relaxed">{item.text}</p>
+                    </div>
+                  </Reveal>
+                </li>
               ))}
             </ol>
           </div>
         </section>
 
         {/* ══════════════════════════════════════════
-            PRODUCTS — accent-color cards, zero images
+            PRODUCTS
         ══════════════════════════════════════════ */}
         <section className="py-20 px-6 border-t border-white/[0.06]" id="identity"
           aria-labelledby="products-heading">
@@ -528,7 +408,7 @@ export default function Homepage() {
         </section>
 
         {/* ══════════════════════════════════════════
-            OS SECTION — 1 responsive image (lazy)
+            OS SECTION
         ══════════════════════════════════════════ */}
         <section className="py-20 px-6 border-t border-white/[0.06]" id="os"
           aria-labelledby="os-heading">
@@ -548,7 +428,6 @@ export default function Homepage() {
                 </button>
               ))}
 
-              {/* TIER 3: lazy, responsive, srcset [400, 800] */}
               <div className="relative rounded-2xl overflow-hidden mt-2 border border-white/[0.08]"
                 style={{ height:180 }}>
                 <Img
@@ -583,7 +462,7 @@ export default function Homepage() {
         </section>
 
         {/* ══════════════════════════════════════════
-            AGENTS — 4 responsive image cards (lazy)
+            AGENTS
         ══════════════════════════════════════════ */}
         <section className="py-20 px-6 border-t border-white/[0.06]" id="agents"
           aria-labelledby="agents-heading">
@@ -609,7 +488,6 @@ export default function Homepage() {
               {AGENTS.map((a, i) => (
                 <Reveal key={a.title} delay={i * 0.07}>
                   <article className="glass rounded-2xl overflow-hidden hover:border-white/14 transition-all duration-300 group hover:-translate-y-1 cursor-default h-full">
-                    {/* TIER 3: lazy, srcset [200, 400], sizes for 4-col/2-col/1-col */}
                     <div className="relative overflow-hidden" style={{ height:120 }}>
                       <Img
                         id={a.id}
@@ -645,7 +523,7 @@ export default function Homepage() {
         </section>
 
         {/* ══════════════════════════════════════════
-            AUDIENCE — 3 responsive image cards (lazy)
+            AUDIENCE
         ══════════════════════════════════════════ */}
         <section className="py-20 px-6 border-t border-white/[0.06]"
           aria-labelledby="audience-heading">
@@ -669,7 +547,6 @@ export default function Homepage() {
               {AUDIENCE.map((a, i) => (
                 <Reveal key={a.title} delay={i * 0.08}>
                   <article className="glass rounded-[1.75rem] overflow-hidden hover:border-white/14 transition-all duration-300 group hover:-translate-y-1 cursor-default h-full">
-                    {/* TIER 3: lazy, srcset [500, 800], sizes for 3-col/1-col */}
                     <div className="relative overflow-hidden" style={{ height:200 }}>
                       <Img
                         id={a.id}
@@ -739,13 +616,12 @@ export default function Homepage() {
         </section>
 
         {/* ══════════════════════════════════════════
-            FINAL CTA — 1 GIF background (lazy / below fold)
+            FINAL CTA
         ══════════════════════════════════════════ */}
         <section className="py-24 px-6" aria-labelledby="cta-heading">
           <div className="max-w-5xl mx-auto">
             <div className="relative rounded-[2rem] overflow-hidden border border-white/10">
               <div aria-hidden="true" className="absolute inset-0 z-0">
-                {/* eager=false — below fold, preload="none", no rush */}
                 <GifVid
                   src={GIF.withAgents}
                   poster={POSTER.withAgents}
@@ -779,6 +655,8 @@ export default function Homepage() {
             </div>
           </div>
         </section>
+
+        </main>
 
         <Footer />
       </div>
