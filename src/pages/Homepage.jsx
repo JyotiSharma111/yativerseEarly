@@ -3,11 +3,12 @@ import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import SEO from "../components/SEO";
+import HeroCards from "../components/HeroCards";
 
 const B = "https://gktcrehhhixfgwkixamg.supabase.co/storage/v1/object/public/yati/";
 const U = "https://images.unsplash.com/";
 
-function uSrc(id, w)         { return `${U}${id}?auto=format&fit=crop&w=${w}&q=82`; }
+function uSrc(id, w)         { return `${U}${id}?auto=format&fit=crop&w=${w}&q=80`; }
 function uSrcset(id, widths) { return widths.map((w) => `${uSrc(id, w)} ${w}w`).join(", "); }
 
 const GIF = {
@@ -16,22 +17,10 @@ const GIF = {
   deepWork:   B + "deep_work.mp4",
 };
 
-const POSTER_ID = {
-  morning:    "photo-1506784983877-45594efa4cbe",
-  withAgents: "photo-1551434678-e076c223a692",
-  deepWork:   "photo-1498050108023-c5249f4df085",
-};
 const POSTER = {
-  morning:    uSrc(POSTER_ID.morning,    600),
-  withAgents: uSrc(POSTER_ID.withAgents, 600),
-  deepWork:   uSrc(POSTER_ID.deepWork,   600),
+  morning:    uSrc("photo-1506784983877-45594efa4cbe", 600),
+  withAgents: uSrc("photo-1551434678-e076c223a692",    600),
 };
-const POSTER_SRCSET = {
-  morning:    uSrcset(POSTER_ID.morning,    [300, 600]),
-  withAgents: uSrcset(POSTER_ID.withAgents, [300, 600]),
-  deepWork:   uSrcset(POSTER_ID.deepWork,   [300, 600]),
-};
-const POSTER_SIZES = "(max-width: 768px) 33vw, 300px";
 
 const IMG_ID = {
   osPreview:        "photo-1551288049-bebda4e38f71",
@@ -55,6 +44,12 @@ const AVATARS = [
   uSrc("photo-1500648767791-00dcc994a43e", 60),
 ];
 
+const HERO_CARDS = [
+  { src: GIF.morning,    posterId:"photo-1506784983877-45594efa4cbe", label:"Morning ritual",   alt:"Founder starting their morning ritual at desk"       },
+  { src: GIF.withAgents, posterId:"photo-1551434678-e076c223a692",    label:"With your agents", alt:"Founder collaborating with AI agents on screen" },
+  { src: GIF.deepWork,   posterId:"photo-1498050108023-c5249f4df085", label:"Deep work",        alt:"Founder in deep focused work session"                },
+];
+
 const SIGNALS     = ["Identity synced","Launch plan ready","3 agent tasks complete","Founder workflow active"];
 const JOURNEY     = [
   { n:"01", title:"Claim your yAtI",  text:"One identity layer for your goals, brand, tools, and builder context."   },
@@ -62,7 +57,7 @@ const JOURNEY     = [
   { n:"03", title:"Activate agents",  text:"Delegate launch, network, content, and ops to AI that knows your build."  },
   { n:"04", title:"Start up right",   text:"Ship consistently, build trust, and grow inside a system that compounds." },
 ];
-const PRODUCTS    = [
+const PRODUCTS = [
   { name:"yAtI Identity", eyebrow:"Core",        text:"A living profile for your founder context, brand signal, and goals.",       accent:"#605CFF" },
   { name:"AI-1 Layer",    eyebrow:"Intelligence", text:"One AI layer connecting your tools, context, agents, and next actions.",    accent:"#C86DD7" },
   { name:"yAtI OS",       eyebrow:"Workspace",    text:"A command center for goals, launches, workflows, metrics, and clarity.",    accent:"#4ECDC4" },
@@ -98,106 +93,8 @@ const QUICK_LINKS = [
   { title:"Community", text:"Founders who get it",           href:"/community" },
 ];
 
-// ── HELPERS ──────────────────────────────────────────────────
-
-/**
- * useIsDesktop — returns true only on screens ≥768px.
- * Starts as false (mobile-first) to avoid hydration mismatch.
- * On desktop, videos load. On mobile, static images load instead.
- */
-function useIsDesktop() {
-  const [isDesktop, setIsDesktop] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    setIsDesktop(mq.matches);
-    const handler = (e) => setIsDesktop(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return isDesktop;
-}
-
-/**
- * HeroCard — the key fix for LCP on mobile.
- *
- * MOBILE  (isDesktop=false): renders a plain <img> with fetchpriority="high".
- *   The poster image is ~15–30KB. Loads in <1s on slow 4G. This IS the LCP element.
- *
- * DESKTOP (isDesktop=true):  renders the looping <video> with poster fallback.
- *   19MB morning.mp4 on desktop broadband is fine. On mobile it was killing LCP.
- *
- * The hidden priority <img> trick is kept for desktop so the poster
- * paints instantly while the video decodes behind it.
- */
-function HeroCard({ src, poster, posterSrcset, alt, label, isDesktop }) {
-  return (
-    <div className="relative w-full h-full">
-      {isDesktop ? (
-        /* DESKTOP — looping video */
-        <>
-          <video
-            src={src}
-            poster={poster}
-            autoPlay muted loop playsInline
-            preload="metadata"
-            aria-hidden="true"
-            className="w-full h-full object-cover relative z-10"
-          />
-          {/* Priority img gives browser a fetchpriority handle on poster */}
-          <img
-            src={poster}
-            srcSet={posterSrcset}
-            sizes={POSTER_SIZES}
-            alt={alt}
-            aria-hidden="true"
-            fetchpriority="high"
-            decoding="async"
-            loading="eager"
-            style={{ position:"absolute", inset:0, width:"100%", height:"100%",
-                     objectFit:"cover", opacity:0, pointerEvents:"none", zIndex:0 }}
-          />
-        </>
-      ) : (
-        /* MOBILE — static image only. No video download at all.
-           fetchpriority="high" + loading="eager" = LCP candidate.
-           ~20KB vs 19MB = 1000× less data on slow 4G. */
-        <img
-          src={poster}
-          srcSet={posterSrcset}
-          sizes={POSTER_SIZES}
-          alt={alt}
-          fetchpriority="high"
-          decoding="async"
-          loading="eager"
-          className="w-full h-full object-cover"
-        />
-      )}
-    </div>
-  );
-}
-
-/**
- * GifVid — used only in the CTA background (below fold, not LCP).
- * Always uses video since it's decorative and below fold on all devices.
- */
-function GifVid({ src, poster, className = "", style = {} }) {
-  return (
-    <div className="relative w-full h-full">
-      <video
-        src={src}
-        poster={poster}
-        autoPlay muted loop playsInline
-        preload="none"
-        aria-hidden="true"
-        className={`${className} relative z-10`}
-        style={style}
-      />
-    </div>
-  );
-}
-
-function Img({ id, widths = [400, 800], sizes = "100vw", alt, className = "",
-               style = {}, loading = "lazy", fetchpriority = "auto", width, height }) {
+function Img({ id, widths=[400,800], sizes="100vw", alt, className="", style={},
+               loading="lazy", fetchpriority="auto", width, height }) {
   const src    = uSrc(id, widths[widths.length - 1]);
   const srcset = uSrcset(id, widths);
   return (
@@ -207,7 +104,7 @@ function Img({ id, widths = [400, 800], sizes = "100vw", alt, className = "",
   );
 }
 
-function Reveal({ children, delay = 0, className = "", style = {} }) {
+function Reveal({ children, delay=0, className="", style={} }) {
   const ref = useRef(null);
   const [vis, setVis] = useState(false);
   useEffect(() => {
@@ -228,28 +125,19 @@ function Reveal({ children, delay = 0, className = "", style = {} }) {
   );
 }
 
-// ── COMPONENT ────────────────────────────────────────────────
 export default function Homepage() {
   const [sig, setSig]                       = useState(0);
   const [activeTimeline, setActiveTimeline] = useState(0);
-  const isDesktop                           = useIsDesktop();
   const signal = useMemo(() => SIGNALS[sig], [sig]);
 
   useEffect(() => {
     const id = setInterval(() => setSig((p) => (p + 1) % SIGNALS.length), 2500);
     return () => clearInterval(id);
   }, []);
-
   useEffect(() => {
     const id = setInterval(() => setActiveTimeline((p) => (p + 1) % TIMELINE_CARDS.length), 2800);
     return () => clearInterval(id);
   }, []);
-
-  const HERO_CARDS = [
-    { src:GIF.morning,    poster:POSTER.morning,    srcset:POSTER_SRCSET.morning,    label:"Morning ritual",   alt:"Founder starting their morning ritual at desk"        },
-    { src:GIF.withAgents, poster:POSTER.withAgents, srcset:POSTER_SRCSET.withAgents, label:"With your agents", alt:"Founder collaborating with AI agents on screen" },
-    { src:GIF.deepWork,   poster:POSTER.deepWork,   srcset:POSTER_SRCSET.deepWork,   label:"Deep work",        alt:"Founder in deep focused work session"                 },
-  ];
 
   return (
     <>
@@ -260,16 +148,13 @@ export default function Homepage() {
         canonical="https://yativerse.ai/"
         ogImage="https://yativerse.ai/og-image.png"
       />
-
       <div className="bg-brand-bg text-white min-h-screen">
         <Navbar />
         <main>
 
         {/* ══ HERO ══ */}
-        <section
-          aria-label="yAtIverse founder operating system"
-          className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-20 overflow-hidden"
-        >
+        <section aria-label="yAtIverse founder operating system"
+          className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-20 overflow-hidden">
           <div aria-hidden="true" className="absolute inset-0 z-0 pointer-events-none"
             style={{ background:"radial-gradient(ellipse 80% 55% at 50% 30%, rgba(96,92,255,0.14) 0%, transparent 68%), radial-gradient(ellipse 45% 35% at 72% 72%, rgba(200,109,215,0.08) 0%, transparent 60%)" }} />
 
@@ -320,37 +205,14 @@ export default function Homepage() {
 
             <div className="flex flex-wrap gap-3 justify-center mb-10">
               <Link to="/waitlist" className="btn-primary">Join Waitlist →</Link>
-              {/* <Link to="/signal-ring" className="btn-ghost">Watch Vision Video</Link> */}
+              <Link to="/signal-ring" className="btn-ghost">Watch Vision Video</Link>
             </div>
-
             <p className="text-xs text-white/35 font-body">Early access · Limited spots available</p>
           </div>
 
-          {/* ── Hero cards — IMAGE on mobile, VIDEO on desktop ── */}
-          <section
-            aria-label="yAtIverse founder lifestyle previews"
-            className="relative z-10 w-full max-w-4xl mx-auto mt-16 px-4"
-          >
-            <div className="grid grid-cols-3 gap-4">
-              {HERO_CARDS.map((c, i) => (
-                <div key={i}
-                  className="relative rounded-2xl overflow-hidden border border-white/[0.08] group aspect-[3/4]"
-                  style={{ transform: i === 1 ? "translateY(-16px)" : "none" }}>
-                  <HeroCard
-                    src={c.src}
-                    poster={c.poster}
-                    posterSrcset={c.srcset}
-                    alt={c.alt}
-                    label={c.label}
-                    isDesktop={isDesktop}
-                  />
-                  <div aria-hidden="true" className="absolute bottom-0 left-0 right-0 p-3 z-20"
-                    style={{ background:"linear-gradient(to top, rgba(0,0,0,0.75), transparent)" }}>
-                    <span className="text-[10px] font-body text-white/60 tracking-wide">{c.label}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <section aria-label="yAtIverse founder lifestyle previews"
+            className="relative z-10 w-full max-w-4xl mx-auto mt-16 px-4">
+            <HeroCards cards={HERO_CARDS} />
           </section>
         </section>
 
@@ -440,7 +302,7 @@ export default function Homepage() {
           </div>
         </section>
 
-        {/* ══ OS SECTION ══ */}
+        {/* ══ OS ══ */}
         <section className="py-20 px-6 border-t border-white/[0.06]" id="os" aria-labelledby="os-heading">
           <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
             <div className="flex flex-col gap-3">
@@ -456,7 +318,7 @@ export default function Homepage() {
                 </button>
               ))}
               <div className="relative rounded-2xl overflow-hidden mt-2 border border-white/[0.08]" style={{ height:180 }}>
-                <Img id={IMG_ID.osPreview} widths={[400, 800]} sizes={OS_SIZES}
+                <Img id={IMG_ID.osPreview} widths={[400,800]} sizes={OS_SIZES}
                   alt="yAtI OS dashboard showing goals, metrics, and daily workflow cards"
                   width={640} height={180} className="w-full h-full object-cover" />
                 <div aria-hidden="true" className="absolute inset-0"
@@ -501,7 +363,7 @@ export default function Homepage() {
                 <Reveal key={a.title} delay={i * 0.07}>
                   <article className="glass rounded-2xl overflow-hidden hover:border-white/14 transition-all duration-300 group hover:-translate-y-1 cursor-default h-full">
                     <div className="relative overflow-hidden" style={{ height:120 }}>
-                      <Img id={a.id} widths={[200, 400]} sizes={AGENT_SIZES} alt={a.alt}
+                      <Img id={a.id} widths={[200,400]} sizes={AGENT_SIZES} alt={a.alt}
                         width={400} height={120}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                       <div aria-hidden="true" className="absolute inset-0"
@@ -548,7 +410,7 @@ export default function Homepage() {
                 <Reveal key={a.title} delay={i * 0.08}>
                   <article className="glass rounded-[1.75rem] overflow-hidden hover:border-white/14 transition-all duration-300 group hover:-translate-y-1 cursor-default h-full">
                     <div className="relative overflow-hidden" style={{ height:200 }}>
-                      <Img id={a.id} widths={[500, 800]} sizes={AUDIENCE_SIZES} alt={a.alt}
+                      <Img id={a.id} widths={[500,800]} sizes={AUDIENCE_SIZES} alt={a.alt}
                         width={600} height={200}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                       <div aria-hidden="true" className="absolute inset-0"
@@ -608,17 +470,14 @@ export default function Homepage() {
           </div>
         </section>
 
-        {/* ══ FINAL CTA ══ */}
+        {/* ══ CTA ══ */}
         <section className="py-24 px-6" aria-labelledby="cta-heading">
           <div className="max-w-5xl mx-auto">
             <div className="relative rounded-[2rem] overflow-hidden border border-white/10">
               <div aria-hidden="true" className="absolute inset-0 z-0">
-                <GifVid
-                  src={GIF.withAgents}
-                  poster={POSTER.withAgents}
-                  className="w-full h-full object-cover"
-                  style={{ opacity:0.22 }}
-                />
+                <video src={GIF.withAgents} poster={POSTER.withAgents}
+                  autoPlay muted loop playsInline preload="none" aria-hidden="true"
+                  className="w-full h-full object-cover" style={{ opacity:0.22 }} />
                 <div className="absolute inset-0"
                   style={{ background:"radial-gradient(ellipse 70% 60% at 50% 40%, rgba(96,92,255,0.32), rgba(5,8,20,0.88) 65%)" }} />
               </div>
