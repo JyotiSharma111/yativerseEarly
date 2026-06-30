@@ -1,142 +1,298 @@
-import { useState } from 'react'
-import { Link }     from 'react-router-dom'
-import { motion }   from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
-import Navbar  from '../components/Navbar'
-import Footer  from '../components/Footer'
-import SEO     from '../components/SEO'
-import { fadeUp, fadeLeft, fadeRight } from '../lib/motion'
+import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import SEO from "../components/SEO";
 
-const T = { purple:'#605CFF', pink:'#C86DD7', teal:'#4ECDC4', rose:'#FF6B8A' }
+const U = "https://images.unsplash.com/";
+function uSrc(id, w) { return `${U}${id}?auto=format&fit=crop&w=${w}&q=80`; }
+
+const IMG_ID = {
+  agentCMO: "photo-1519389950473-47ba0277781c",
+  agentCRO: "photo-1521791136064-7986c2920216",
+  agentCFO: "photo-1434030216411-0b793f4b4173",
+  agentCOO: "photo-1478737270239-2f02b77fc618",
+};
+
+const AGENT_SIZES = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw";
 
 const AGENTS = [
-  { id:'launch',  name:'Launch Agent',  tagline:'From idea to launch plan in minutes.',         color:T.purple, icon:'🚀', img:'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1000&q=80', desc:'The Launch Agent is your strategic co-founder. It validates your concept against market signals, maps competitors, and builds an executable launch plan tailored to your resources and timeline.', tasks:['Market & competitor research','MVP scope definition','Go-to-market planning','Launch checklist generation','Risk identification'], workflow:['Drop in your idea or product concept.','Launch Agent scans market and competitor data.','Returns a prioritized MVP path and validation checklist.','You approve and it builds a structured launch plan.','Weekly progress updates as you execute.'] },
-  { id:'network', name:'Network Agent', tagline:'Right people. Right time. Right context.',      color:T.pink,   icon:'🤝', img:'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1000&q=80', desc:'Network Agent finds aligned mentors, investors, collaborators, and early customers — then helps you reach out with context-aware introductions that actually land.',                             tasks:['Lead list building','Warm intro drafting','Investor radar','Mentor matching','Follow-up sequences'],                                          workflow:['Define your current stage and networking goals.','Network Agent maps relevant people in your space.','Drafts personalized outreach for each contact.','You review and approve before any send.','Agent tracks responses and schedules follow-ups.'] },
-  { id:'focus',   name:'Focus Agent',   tagline:'Protect your deep work. Guard your time.',     color:T.teal,   icon:'🎯', img:'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?auto=format&fit=crop&w=1000&q=80', desc:'Focus Agent structures your day around your highest-leverage actions, holds distractions at bay, and reviews progress weekly so momentum compounds without burning out.',                       tasks:['Daily priority setting','Deep work scheduling','Distraction blocking','Weekly retrospectives','Energy pattern tracking'],                        workflow:['Set your weekly goals in yAtI OS each Monday.','Focus Agent structures time blocks around them.','Notifications held during deep work sessions.','End-of-day summary of what actually moved.','Weekly reset and next-week planning.'] },
-  { id:'brand',   name:'Brand Agent',   tagline:'A content engine built around your voice.',    color:T.rose,   icon:'✏️', img:'https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=1000&q=80', desc:'Brand Agent learns your tone, audience, and offers — then builds a consistent content engine across every platform, drafting, scheduling, repurposing, and tracking what resonates.',           tasks:['Content calendar creation','Post drafting in your voice','Multi-platform repurposing','Campaign ideation','Audience signal tracking'],            workflow:['Define your brand voice, audience, and content goals.','Brand Agent builds a 30-day content strategy.','Drafts posts across platforms for your review.','You approve. Agent schedules and publishes.','Weekly performance summary and content pivots.'] },
-]
+  {
+    title: "AI CMO",
+    role:  "Brand & demand",
+    color: "#605CFF",
+    text:  "Creates positioning, content strategy, campaigns, product messaging, and audience insights.",
+    tasks: ["Brand positioning", "Content strategy", "Campaign ideas"],
+    id: IMG_ID.agentCMO, alt: "Founder planning a go-to-market strategy",
+  },
+  {
+    title: "AI CRO",
+    role:  "Revenue growth",
+    color: "#C86DD7",
+    text:  "Scores leads, drafts outreach, supports deal coaching, and recommends next best actions.",
+    tasks: ["Lead scoring", "Warm outreach", "Deal coaching"],
+    id: IMG_ID.agentCRO, alt: "Professional connecting with a potential client",
+  },
+  {
+    title: "AI CFO",
+    role:  "Financial discipline",
+    color: "#4ECDC4",
+    text:  "Tracks budgets, runway, unit economics, investor updates, and financial decision scenarios.",
+    tasks: ["Runway tracking", "Unit economics", "Investor updates"],
+    id: IMG_ID.agentCFO, alt: "Founder reviewing financial metrics at desk",
+  },
+  {
+    title: "AI COO",
+    role:  "Execution engine",
+    color: "#FF6B8A",
+    text:  "Turns goals into workflows, routines, delivery systems, and operating dashboards.",
+    tasks: ["Goal-to-workflow", "Daily routines", "Operating dashboards"],
+    id: IMG_ID.agentCOO, alt: "Operator managing execution systems",
+  },
+];
 
-const HOW = [
-  { n:'01', title:'Agents learn your context', desc:'When you set up yAtI OS, each agent absorbs your identity, goals, stage, and preferences.' },
-  { n:'02', title:'You assign work, not tasks', desc:'Tell Launch Agent to find your first 10 customers. It handles research, outreach, and tracking.' },
-  { n:'03', title:'Agents collaborate',         desc:'Brand Agent and Network Agent can work together — finding audiences and creating content simultaneously.' },
-  { n:'04', title:'You stay in control',         desc:'Every major action needs your approval. Agents surface options, never surprises.' },
-]
+const COST_COMPARISON = [
+  { role: "CMO", label: "Chief Marketing Officer", cost: "$226K+", sub: "avg. base salary · US startup", accent: "#605CFF" },
+  { role: "CRO", label: "Chief Revenue Officer",   cost: "$200K+", sub: "avg. base salary · US startup", accent: "#C86DD7" },
+  { role: "CFO", label: "Chief Financial Officer", cost: "$200K+", sub: "avg. base salary · US startup", accent: "#4ECDC4" },
+  { role: "COO", label: "Chief Operating Officer", cost: "$151K+", sub: "avg. base salary · US startup", accent: "#FF6B8A" },
+];
 
-export default function Agents() {
-  const [active, setActive] = useState('launch')
-  const ag = AGENTS.find(a => a.id === active)
+const HOW_IT_WORKS = [
+  {
+    n: "01",
+    title: "Each agent owns a function",
+    text:  "Strategy, marketing, sales, finance, and operations — each agent runs real workflows inside that domain, every day.",
+  },
+  {
+    n: "02",
+    title: "They report to you",
+    text:  "No agent acts unsupervised on anything that matters. Recommendations and drafts come to you for review and approval.",
+  },
+  {
+    n: "03",
+    title: "They connect through Founder OS",
+    text:  "Your Digital C-Suite plugs into the same daily rhythm as everything else in YATIVerse — one system, not four separate tools.",
+  },
+];
 
+function Reveal({ children, delay = 0, className = "", style = {} }) {
+  const ref = useRef(null);
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVis(true); io.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={className}
+      style={{ opacity: vis ? 1 : 0, transform: vis ? "none" : "translateY(24px)",
+               transition: `opacity 0.7s ease ${delay}s, transform 0.7s ease ${delay}s`, ...style }}>
+      {children}
+    </div>
+  );
+}
+
+export default function AgentsPage() {
   return (
     <>
-      <SEO title="AI Agents — Your Invisible Executive Team" description="Four specialized AI agents — Launch, Network, Focus, Brand — that own workflows, execute tasks, and collaborate so you never build alone." path="/agents" />
+      <SEO
+        path="/agents"
+        title="Digital C-Suite — AI Executive Agents | yAtIverse"
+        description="Role-based AI executives across strategy, marketing, sales, finance, and operations. The Digital C-Suite gives founders leadership support without enterprise overhead."
+        canonical="https://yativerse.ai/agents"
+        ogImage="https://yativerse.ai/og-image.png"
+      />
       <div className="bg-brand-bg text-white min-h-screen">
         <Navbar />
+        <main>
 
-        {/* Hero */}
-        <section className="relative pt-40 pb-24 text-center overflow-hidden px-4">
-          <div className="absolute inset-0 pointer-events-none" style={{ background:'radial-gradient(ellipse 70% 55% at 50% 0%, rgba(200,109,215,.13), transparent 65%)' }} />
-          <motion.span {...fadeUp(0)} className="kicker mb-6 inline-block">Your AI C-Suite</motion.span>
-          <motion.h1 {...fadeUp(0.07)} className="font-display font-bold tracking-[-0.04em] leading-[0.96] mb-6 text-white" style={{ fontSize:'clamp(44px,7vw,92px)' }}>
-            Your invisible<br /><span className="text-gradient">executive team.</span>
-          </motion.h1>
-          <motion.p {...fadeUp(0.13)} className="font-body text-lg text-white/55 max-w-lg mx-auto mb-10 leading-relaxed">
-            Specialized AI agents that own workflows, execute tasks, and collaborate — so you can focus on building.
-          </motion.p>
-          <motion.div {...fadeUp(0.18)}>
-            <Link to="/waitlist" className="btn-primary">Activate your agents <ArrowRight className="w-4 h-4" /></Link>
-          </motion.div>
-        </section>
+          {/* ══ HERO ══ */}
+          <section className="relative px-6 pt-32 pb-20 overflow-hidden">
+            <div aria-hidden="true" className="absolute inset-0 z-0 pointer-events-none"
+              style={{ background:"radial-gradient(ellipse 70% 50% at 50% 20%, rgba(255,107,138,0.14) 0%, transparent 65%)" }} />
+            <div className="relative z-10 max-w-3xl mx-auto text-center">
+              <Reveal>
+                <span className="kicker mb-5 inline-block">Digital C-Suite · Your AI team</span>
+                <h1 className="font-display font-bold leading-[1.02] tracking-[-0.03em] text-white mb-5"
+                  style={{ fontSize:"clamp(36px,5.5vw,68px)" }}>
+                  Executives,{" "}
+                  <span className="text-gradient">without the overhead.</span>
+                </h1>
+                <p className="font-body text-lg text-white/55 leading-relaxed max-w-xl mx-auto mb-8">
+                  Role-based AI agents — CMO, CRO, CFO, COO — each running real workflows in your business. Strategy, growth, finance, and execution, working in the background every day.
+                </p>
+                <Link to="/waitlist" className="btn-primary">Join the Waitlist →</Link>
+              </Reveal>
+            </div>
+          </section>
 
-        {/* Tabs + detail */}
-        <section className="py-20 px-4 sm:px-6 max-w-5xl mx-auto">
-          {/* Tabs */}
-          <motion.div {...fadeUp(0)} className="flex gap-2 justify-center flex-wrap mb-14">
-            {AGENTS.map(a => (
-              <button key={a.id}
-                onClick={() => setActive(a.id)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium font-body transition-all duration-200 border
-                  ${active === a.id ? 'text-white' : 'text-white/55 border-white/10 bg-white/[0.04] hover:text-white hover:border-white/20'}`}
-                style={active === a.id ? { background:`${a.color}20`, borderColor:`${a.color}50`, color:a.color } : {}}>
-                <span>{a.icon}</span>{a.name}
-              </button>
-            ))}
-          </motion.div>
+          {/* ══ AGENT GRID ══ */}
+          <section className="py-20 px-6 border-t border-white/[0.06]" aria-labelledby="agents-heading">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center max-w-2xl mx-auto mb-14">
+                <Reveal>
+                  <span className="kicker mb-5 inline-block">Meet the team</span>
+                  <h2 id="agents-heading" className="font-display font-bold tracking-tight text-white"
+                    style={{ fontSize:"clamp(28px,3.5vw,44px)" }}>
+                    Four roles.{" "}
+                    <span className="text-gradient">One invisible team.</span>
+                  </h2>
+                </Reveal>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {AGENTS.map((a, i) => (
+                  <Reveal key={a.title} delay={i * 0.07}>
+                    <article className="glass rounded-2xl overflow-hidden hover:border-white/14 transition-all duration-300 group hover:-translate-y-1 cursor-default h-full">
+                      <div className="relative overflow-hidden" style={{ height: 140 }}>
+                        <img src={uSrc(a.id, 400)} srcSet={`${uSrc(a.id, 200)} 200w, ${uSrc(a.id, 400)} 400w`}
+                          sizes={AGENT_SIZES} alt={a.alt} width={400} height={140} loading="lazy" decoding="async"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        <div aria-hidden="true" className="absolute inset-0"
+                          style={{ background:"linear-gradient(to bottom, transparent 20%, rgba(5,8,20,0.9) 100%)" }} />
+                      </div>
+                      <div className="p-5">
+                        <span className="inline-block text-[10px] font-mono font-medium tracking-widest uppercase px-2.5 py-1 rounded-full mb-2"
+                          style={{ background:`${a.color}18`, color:a.color, border:`1px solid ${a.color}30` }}>
+                          {a.title}
+                        </span>
+                        <p className="font-display text-xs font-semibold mb-3" style={{ color: a.color }}>{a.role}</p>
+                        <p className="font-body text-xs text-white/55 leading-relaxed mb-3">{a.text}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {a.tasks.map((t) => (
+                            <span key={t} className="text-[10px] font-body px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-white/50">{t}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </article>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </section>
 
-          {/* Detail */}
-          {ag && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-14 items-start">
-              <motion.div key={ag.id} initial={{ opacity:0, scale:0.97 }} animate={{ opacity:1, scale:1 }} transition={{ duration:0.35 }}
-                className="relative rounded-3xl overflow-hidden aspect-[4/3]">
-                <img src={ag.img} alt={ag.name} className="w-full h-full object-cover" loading="lazy" />
-                <div className="absolute inset-0" style={{ background:'linear-gradient(to top, rgba(5,8,20,.55), transparent 50%)' }} />
-              </motion.div>
-
-              <motion.div key={ag.id + '-copy'} initial={{ opacity:0, x:16 }} animate={{ opacity:1, x:0 }} transition={{ duration:0.38 }}>
-                <h2 className="font-display font-bold tracking-tight mb-2" style={{ fontSize:'clamp(28px,3.5vw,46px)', color:ag.color }}>{ag.name}</h2>
-                <p className="font-body text-lg text-white/48 mb-4">{ag.tagline}</p>
-                <p className="font-body text-sm text-white/58 leading-relaxed mb-7">{ag.desc}</p>
-
-                <p className="text-[10px] font-mono uppercase tracking-[0.13em] text-white/32 mb-3">What it handles</p>
-                <div className="flex flex-wrap gap-2 mb-7">
-                  {ag.tasks.map(t => (
-                    <span key={t} className="text-xs font-body px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/[0.09] text-white/62">{t}</span>
-                  ))}
-                </div>
-
-                <p className="text-[10px] font-mono uppercase tracking-[0.13em] text-white/32 mb-3">How it works</p>
-                <div className="flex flex-col gap-2 mb-8">
-                  {ag.workflow.map((w, i) => (
-                    <div key={i} className="flex gap-3 items-start p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]"
-                      style={{ borderColor:`${ag.color}18` }}>
-                      <span className="text-[10px] font-mono text-white/28 mt-0.5 flex-shrink-0">0{i+1}</span>
-                      <span className="text-xs font-body text-white/62 leading-relaxed">{w}</span>
+          {/* ══ HOW IT WORKS ══ */}
+          <section className="py-20 px-6 border-t border-white/[0.06]" aria-labelledby="how-heading">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center max-w-2xl mx-auto mb-14">
+                <Reveal>
+                  <span className="kicker mb-5 inline-block">How it works</span>
+                  <h2 id="how-heading" className="font-display font-bold tracking-tight text-white"
+                    style={{ fontSize:"clamp(28px,3.5vw,44px)" }}>
+                    Leadership support,{" "}
+                    <span className="text-gradient">without the org chart.</span>
+                  </h2>
+                </Reveal>
+              </div>
+              <div className="grid sm:grid-cols-3 gap-5">
+                {HOW_IT_WORKS.map((item, i) => (
+                  <Reveal key={item.n} delay={i * 0.08}>
+                    <div className="glass rounded-2xl p-6 h-full">
+                      <span aria-hidden="true" className="block font-mono text-3xl font-bold mb-4 leading-none"
+                        style={{ color:"rgba(255,107,138,0.4)" }}>{item.n}</span>
+                      <h3 className="font-display font-semibold text-base text-white mb-2">{item.title}</h3>
+                      <p className="font-body text-sm text-white/50 leading-relaxed">{item.text}</p>
                     </div>
-                  ))}
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ══ SAVINGS ══ */}
+          <section className="py-20 px-6 border-t border-white/[0.06]" aria-labelledby="savings-heading">
+            <div className="max-w-7xl mx-auto">
+              <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-start mb-14">
+                <Reveal>
+                  <span className="kicker mb-5 inline-block">What you save</span>
+                  <h2 id="savings-heading" className="font-display font-bold leading-tight tracking-tight text-white"
+                    style={{ fontSize:"clamp(28px,3.5vw,44px)" }}>
+                    A real C-Suite costs<br />
+                    <span className="text-gradient">$750K+ a year.</span>
+                  </h2>
+                </Reveal>
+                <Reveal delay={0.1}>
+                  <p className="font-body text-base text-white/58 leading-relaxed lg:pt-14">
+                    Hiring CMO, CRO, CFO, and COO full-time costs over $750,000 in base salaries alone — before benefits, bonuses, or equity. Your Digital C-Suite gives you the same functional coverage, working 24/7, at a fraction of the cost.
+                  </p>
+                </Reveal>
+              </div>
+
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                {COST_COMPARISON.map((item, i) => (
+                  <Reveal key={item.role} delay={i * 0.07}>
+                    <div className="glass rounded-2xl overflow-hidden border border-white/[0.08] h-full">
+                      <div aria-hidden="true" className="h-1 w-full" style={{ background: item.accent, opacity: 0.7 }} />
+                      <div className="p-5">
+                        <span className="font-mono text-[10px] tracking-widest uppercase mb-2 block"
+                          style={{ color: item.accent }}>{item.role}</span>
+                        <p className="font-display font-bold text-white mb-1"
+                          style={{ fontSize:"clamp(20px,2.5vw,28px)" }}>{item.cost}</p>
+                        <p className="font-body text-xs text-white/35 leading-relaxed">{item.label}</p>
+                        <p className="font-mono text-[10px] text-white/25 mt-1">{item.sub}</p>
+                      </div>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+
+              <Reveal delay={0.32}>
+                <div className="glass rounded-2xl p-6 grid sm:grid-cols-2 gap-4 items-center">
+                  <div className="flex items-start gap-3">
+                    <span className="text-white/20 text-lg font-bold flex-shrink-0 mt-0.5" aria-hidden="true">✕</span>
+                    <div>
+                      <p className="font-display font-semibold text-white text-base mb-1">Full C-Suite hire</p>
+                      <p className="font-display font-bold text-white/40" style={{ fontSize:"clamp(20px,2vw,24px)" }}>$750,000+ / year</p>
+                      <p className="font-body text-xs text-white/30 mt-1">Base salaries only · benefits, bonuses & equity extra</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 sm:border-l sm:border-white/[0.06] sm:pl-4">
+                    <span className="text-[#77d6a1] text-lg font-bold flex-shrink-0 mt-0.5" aria-hidden="true">✓</span>
+                    <div>
+                      <p className="font-display font-semibold text-white text-base mb-1">Your Digital C-Suite</p>
+                      <p className="font-display font-bold text-[#77d6a1]" style={{ fontSize:"clamp(20px,2vw,24px)" }}>A fraction of that</p>
+                      <p className="font-body text-xs text-white/30 mt-1">24/7 · no hiring · no notice period · no equity dilution</p>
+                    </div>
+                  </div>
                 </div>
+              </Reveal>
 
-                <Link to="/waitlist" className="btn-primary" style={{ background:`linear-gradient(135deg, ${ag.color}, #C86DD7)` }}>
-                  Activate {ag.name} <ArrowRight className="w-4 h-4" />
-                </Link>
-              </motion.div>
+              <Reveal delay={0.4}>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-white/20 text-center mt-5">
+                  Salary data sourced from Built In, ZipRecruiter, and Salary.com · 2025–2026
+                </p>
+              </Reveal>
             </div>
-          )}
-        </section>
+          </section>
 
-        {/* How it works */}
-        <section className="py-20 px-4 border-t border-white/[0.06]">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              <motion.span {...fadeUp(0)} className="kicker mb-4 inline-block">The system</motion.span>
-              <motion.h2 {...fadeUp(0.07)} className="font-display font-bold tracking-tight text-white" style={{ fontSize:'clamp(28px,3.5vw,48px)' }}>
-                Agents that <span className="text-gradient">work together.</span>
-              </motion.h2>
+          {/* ══ CTA ══ */}
+          <section className="py-24 px-6" aria-labelledby="cta-heading">
+            <div className="max-w-5xl mx-auto">
+              <div className="relative rounded-[2rem] overflow-hidden border border-white/10 px-8 md:px-12 py-16 text-center"
+                style={{ background:"radial-gradient(ellipse 70% 60% at 50% 40%, rgba(255,107,138,0.16), rgba(5,8,20,0.92) 70%)" }}>
+                <Reveal>
+                  <h2 id="cta-heading" className="font-display font-bold tracking-tight text-white mb-4"
+                    style={{ fontSize:"clamp(28px,4vw,48px)" }}>
+                    Build your invisible team.
+                  </h2>
+                  <p className="font-body text-white/60 mt-2 max-w-xl mx-auto leading-relaxed mb-8">
+                    Join the waitlist to get early access to your Digital C-Suite as it rolls out.
+                  </p>
+                  <Link to="/waitlist" className="btn-primary !py-4 !px-10 !text-base uppercase tracking-wide">
+                    Join the Waitlist →
+                  </Link>
+                </Reveal>
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {HOW.map((h, i) => (
-                <motion.div key={h.n} {...fadeUp(i * 0.07)} className="glass rounded-2xl p-6 hover:border-white/14 transition-colors duration-300">
-                  <p className="font-mono text-[10px] text-white/26 tracking-widest mb-3">{h.n}</p>
-                  <p className="font-display font-semibold text-sm text-white mb-2">{h.title}</p>
-                  <p className="font-body text-xs text-white/48 leading-relaxed">{h.desc}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
+          </section>
 
-        {/* CTA */}
-        <section className="py-24 text-center px-4">
-          <motion.h2 {...fadeUp(0)} className="font-display font-bold tracking-tight text-white mb-4" style={{ fontSize:'clamp(32px,4vw,56px)' }}>
-            Stop doing it<br /><span className="text-gradient">alone.</span>
-          </motion.h2>
-          <motion.p {...fadeUp(0.08)} className="font-body text-white/52 mb-8 text-lg">Your agents are ready. Your ecosystem is waiting.</motion.p>
-          <motion.div {...fadeUp(0.14)}>
-            <Link to="/waitlist" className="btn-primary">Join the waitlist <ArrowRight className="w-4 h-4" /></Link>
-          </motion.div>
-        </section>
-
+        </main>
         <Footer />
       </div>
     </>
-  )
+  );
 }

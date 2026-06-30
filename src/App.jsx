@@ -8,6 +8,7 @@ import Community   from './pages/Community'
 import Waitlist    from './pages/Waitlist'
 import SignalRing  from './pages/SignalRing'
 import EarlyAccess from './pages/EarlyAccess'
+import OSPage from './pages/os'
 import YATI from './pages/yAtI'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import CookiePolicy from './pages/CookiePolicy'
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/yAtI" element={<YATI />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/cookie-policy" element={<CookiePolicy />} />
+         <Route path="/founder-os" element={<OSPage />} />
       </Routes>
     </>
   )

@@ -28,13 +28,13 @@ npm run build
 ## Adding Your Logo (Required)
 
 You need to add your logo image to the `/public` folder.
-The site references `/logo.png` in both the Navbar and Footer.
+The site references `/logo.jpeg` in both the Navbar and Footer.
 
 **Files to add to `/public/`:**
 
 | File | Size | Purpose |
 |------|------|---------|
-| `logo.png` | Any (square recommended) | Navbar + Footer logo mark (displayed at 36×36px) |
+| `logo.jpeg` | Any (square recommended) | Navbar + Footer logo mark (displayed at 36×36px) |
 | `favicon-32.png` | 32×32px | Browser tab icon |
 | `favicon-16.png` | 16×16px | Small browser tab icon |
 | `apple-touch-icon.png` | 180×180px | iOS home screen icon |
@@ -60,7 +60,7 @@ your link on X, LinkedIn, WhatsApp etc.
 ```
 yAtIverse/
 ├── public/
-│   ├── logo.png              ← ADD THIS (your logo)
+│   ├── logo.jpeg              ← ADD THIS (your logo)
 │   ├── favicon-32.png        ← ADD THIS
 │   ├── favicon-16.png        ← ADD THIS
 │   ├── apple-touch-icon.png  ← ADD THIS
@@ -68,8 +68,8 @@ yAtIverse/
 │   └── site.webmanifest      ✓ included
 ├── src/
 │   ├── components/
-│   │   ├── Navbar.jsx        ✓ uses /logo.png
-│   │   └── Footer.jsx        ✓ uses /logo.png
+│   │   ├── Navbar.jsx        ✓ uses /logo.jpeg
+│   │   └── Footer.jsx        ✓ uses /logo.jpeg
 │   ├── pages/
 │   │   ├── Homepage.jsx
 │   │   ├── Wearables.jsx
