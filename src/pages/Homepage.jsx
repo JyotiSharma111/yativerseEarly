@@ -56,10 +56,10 @@ const HERO_CARDS = [
 // ─── COPY ────────────────────────────────────────────────────────────────────
 
 const SIGNALS = [
-  "Morning briefing ready",
-  "3 decisions pending",
-  "Agent team working",
-  "Founder lifestyle active",
+  "Recovery: 84%",
+  "Resting HR: 58 bpm",
+  "Sleep: 7h 12m",
+  "Steps today: 4,210",
 ];
 
 const HERO_PILLS = [
@@ -91,9 +91,9 @@ const BEFORE_AFTER = [
 ];
 
 const LAUNCH_TIMELINE = [
-  { q: "Q3 2026", label: "Signal Ring ships",       dot: "#605CFF" },
-  { q: "Q4 2026", label: "Founder OS launches",     dot: "#C86DD7" },
-  { q: "2027",    label: "Full ecosystem goes live", dot: "#FF6B8A" },
+  { q: "Now",      label: "Signal Ring — sleep, heart rate, activity, recovery", dot: "#605CFF" },
+  { q: "Next",     label: "Founder OS — your daily command center",             dot: "#C86DD7" },
+  { q: "Later",    label: "Digital C-Suite — full ecosystem connected",         dot: "#FF6B8A" },
 ];
 
 const JOURNEY = [
@@ -125,11 +125,11 @@ const PRODUCTS = [
     eyebrow: "Launching first",
     text:    "The Signal Ring. Daily intelligence, productivity, and personal assistance — always on, always with you.",
     accent:  "#605CFF",
-    tag:     "Hardware · Ships Q3 2026",
+    tag:     "Hardware · Available now",
   },
   {
     name:    "Founder OS",
-    eyebrow: "Coming Q4 2026",
+    eyebrow: "Coming next",
     text:    "Your operating rhythm. Goals, priorities, dashboards, and weekly cadence — one command center for everything that matters.",
     accent:  "#4ECDC4",
     tag:     "Software · Early access",
@@ -420,17 +420,17 @@ export default function Homepage() {
         <section className="py-20 px-6 border-t border-white/[0.06]" id="wearables" aria-labelledby="wearable-heading">
           <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-20 items-center">
             <Reveal>
-              <span className="kicker mb-5 inline-block">Launching first</span>
+              <span className="kicker mb-5 inline-block">Available now</span>
               <h2 id="wearable-heading" className="font-display font-bold tracking-tight text-white mb-5"
                 style={{ fontSize:"clamp(28px,3.5vw,44px)" }}>
                 It starts on your finger.{" "}
-                <span className="text-gradient">It runs your company.</span>
+                <span className="text-gradient">It's just the beginning.</span>
               </h2>
               <p className="font-body text-base text-white/55 leading-relaxed mb-4 max-w-md">
-                The Signal Ring is the first physical piece of the YATIVerse lifestyle. Before the full OS launches, it delivers your morning briefing, surfaces agent alerts, and lets you make decisions without opening a laptop.
+                The Signal Ring tracks your sleep, heart rate, activity, and recovery — giving you the daily readiness data founders need to operate at their best.
               </p>
               <p className="font-body text-sm text-white/38 leading-relaxed mb-8 max-w-md">
-                Wear it at a meeting. Tap twice to approve a decision. Walk out of the room while your AI team keeps working.
+                It's the first physical piece of the YATIVerse lifestyle — and the foundation everything else gets built on, as Founder OS and your Digital C-Suite come online.
               </p>
               <div className="flex flex-col gap-3 mb-8">
                 {LAUNCH_TIMELINE.map((item) => (
