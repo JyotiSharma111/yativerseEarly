@@ -16,68 +16,51 @@ const MEGA = {
         img: "ring1.jpeg",
         href: "/wearables",
       },
-      {
-        name: "AI Earbuds",
-        desc: "Ambient intelligence. Always listening.",
-        tag: "Pre-order",
-        color: "#4ECDC4",
-        img: "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?auto=format&fit=crop&w=80&q=80",
-        href: "/wearables",
-      },
-      {
-        name: "Thread Pendant",
-        desc: "Your AI. Close to heart. Always on.",
-        tag: "Coming soon",
-        color: "#C86DD7",
-        img: "pendant1.jpeg",
-        href: "/wearables",
-      },
     ],
-    cta: { label: "Shop all wearables", href: "/wearables" },
+    cta: { label: "Explore YATI Flow", href: "/wearables" },
   },
   agents: {
     eyebrow: "Your AI C-Suite",
     headline: "Your invisible executive team.",
     items: [
       {
-        name: "Launch Agent",
-        desc: "From idea to launch plan in minutes.",
+        name: "AI CMO",
+        desc: "Brand, content, campaigns, positioning.",
         color: "#605CFF",
-        icon: "🚀",
+        icon: "📣",
         href: "/agents",
       },
       {
-        name: "Network Agent",
-        desc: "Find mentors, investors, collaborators.",
+        name: "AI CRO",
+        desc: "Lead scoring, outreach, deal coaching.",
         color: "#C86DD7",
-        icon: "🤝",
+        icon: "📈",
         href: "/agents",
       },
       {
-        name: "Focus Agent",
-        desc: "Protect your deep work. Guard your time.",
+        name: "AI CFO",
+        desc: "Runway, unit economics, investor updates.",
         color: "#4ECDC4",
-        icon: "🎯",
+        icon: "💰",
         href: "/agents",
       },
       {
-        name: "Brand Agent",
-        desc: "Content engine built around your voice.",
+        name: "AI COO",
+        desc: "Workflows, routines, operating dashboards.",
         color: "#FF6B8A",
-        icon: "✏️",
+        icon: "⚙️",
         href: "/agents",
       },
     ],
-    cta: { label: "Explore all agents", href: "/agents" },
+    cta: { label: "Meet your C-Suite", href: "/agents" },
   },
 };
 
 const NAV_LINKS = [
-  { label: "yAtI- Your Story", href: "/yAtI", highlight: true },
-  { label: "Wearables", href: "/wearables", mega: "wearables" },
-  { label: "Agents", href: "/agents", mega: "agents" },
-  { label: "Journey", href: "/journey" },
-  { label: "Community", href: "/community" },
+  { label: "yAtI — Your Story", href: "/yAtI" },
+  { label: "YATI Flow", href: "/wearables", mega: "wearables" },
+  { label: "Digital C-Suite", href: "/agents", mega: "agents" },
+  { label: "Founder-OS", href: "/founder-os" },
 ];
 
 export default function Navbar() {
@@ -131,7 +114,7 @@ export default function Navbar() {
         {/* Brand */}
         <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
           <img
-            src="/logo.png"
+            src="/logo.jpeg"
             alt="yAtIverse"
             className="w-12 h-12 object-contain"
           />
@@ -168,7 +151,9 @@ export default function Navbar() {
     ${
       l.highlight
         ? "bg-[#F5C542] text-black font-semibold shadow-[0_0_12px_rgba(245,197,66,0.45)]"
-        : "text-white/60 hover:text-white hover:bg-white/[0.06]"
+        : pathname === l.href
+          ? "text-white bg-white/[0.08]"
+          : "text-white/60 hover:text-white hover:bg-white/[0.06]"
     }
   `}
               >
