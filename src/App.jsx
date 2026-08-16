@@ -8,6 +8,7 @@ import Community   from './pages/Community'
 import Waitlist    from './pages/Waitlist'
 import SignalRing  from './pages/SignalRing'
 import EarlyAccess from './pages/EarlyAccess'
+import Order       from './pages/Order'
 import OSPage from './pages/os'
 import YATI from './pages/yAtI'
 import PrivacyPolicy from './pages/PrivacyPolicy'
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/waitlist"     element={<Waitlist />}    />
         <Route path="/signal-ring"  element={<SignalRing />}  />
         <Route path="/early-access" element={<EarlyAccess />} />
+        <Route path="/order"        element={<Order />}       />
         <Route path="/yAtI" element={<YATI />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/cookie-policy" element={<CookiePolicy />} />
