@@ -414,7 +414,7 @@ export default function SignalRing() {
           </motion.div>
 
           <motion.div {...fadeUp(0.12)}>
-            <Link to="/early-access"
+            <Link to="/order"
               className="inline-flex items-center gap-2 px-10 py-4 rounded-full font-display font-bold text-sm text-black transition-all duration-300 hover:scale-105"
               style={{ background:`linear-gradient(135deg,${GOLD},${GOLD2})`, boxShadow:`0 0 40px rgba(201,168,76,0.35)`, fontSize:'1rem' }}>
               Reserve Early Access <ArrowRight className="w-5 h-5" />
