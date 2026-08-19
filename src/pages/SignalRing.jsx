@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link }              from 'react-router-dom'
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
-import { ArrowRight, ChevronDown, Zap, Brain, Shield, Activity, Moon, Heart, Wind, Cpu } from 'lucide-react'
+import { ArrowRight, ChevronDown, Moon, Activity, Scale, TrendingUp, Droplet, Sparkles, ShieldCheck, History, PlayCircle } from 'lucide-react'
 import SEO from '../components/SEO'
 import { fadeUp, fadeLeft, fadeRight, scaleIn, heroEntrance } from '../lib/motion'
 
@@ -20,37 +20,58 @@ const COLORS = [
   { name:'Lunar Silver',   hex:'#C0C0C0', glow:'rgba(192,192,192,0.45)' },
 ]
 
-const MODES = [
-  { icon:Brain,    label:'Meeting Mode',    color:BLUE   },
-  { icon:Moon,     label:'Sleep Mode',      color:PURPLE },
-  { icon:Zap,      label:'Focus Mode',      color:GOLD   },
-  { icon:Wind,     label:'Recovery Lite',   color:PINK   },
-  { icon:Heart,    label:'Confidence Mode', color:'#FF6B6B' },
-  { icon:Activity, label:'Active Mode',     color:TEAL   },
+/* Home-screen elements, shown as pills under the hero */
+const HOME_SIGNALS = [
+  { icon:Moon,       label:'Sleep Score',    color:PURPLE },
+  { icon:Activity,   label:'Activity Score', color:TEAL   },
+  { icon:Scale,      label:'Balance Score',  color:GOLD   },
+  { icon:TrendingUp, label:'HR Trend',       color:PINK   },
+  { icon:Droplet,    label:'SpO2 Trend',     color:BLUE   },
+  { icon:Sparkles,   label:'Daily Insights', color:'#FF6B6B' },
 ]
 
 const FEATURES = [
-  { tag:'Meeting Mode',    title:'Walk in sharp.\nEvery time.',        body:'Signal Ring reads the room before you enter it. As you approach a meeting, it subtly activates Meeting Mode — sharpening your focus, softening distractions, and cuing your posture.',                                 img:'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=1200&q=85', accent:BLUE,   align:'left'  },
-  { tag:'Sleep Intelligence', title:'Rest deeper.\nRecover faster.',   body:'While you sleep, Signal Ring tracks your HRV, breathing rate, and sleep stages — then builds a personal recovery score the AI-1 engine uses to plan your optimal next day.',                                         img:'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?auto=format&fit=crop&w=1200&q=85', accent:PURPLE, align:'right' },
-  { tag:'Focus Mode',      title:'Deep work,\non demand.',             body:'One press activates Focus Mode. Signal Ring suppresses environmental noise cues, raises your cognitive baseline, and locks you into a flow state — no willpower required.',                                           img:'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=1200&q=85', accent:GOLD,   align:'left'  },
-  { tag:'Recovery Lite',   title:'Recover between\nevery task.',       body:'Signal Ring detects stress signatures between meetings and triggers micro-recovery protocols — breathwork cues, posture nudges, and cognitive resets — invisibly, in real time.',                                    img:'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1200&q=85', accent:PINK,   align:'right' },
+  {
+    tag:'Home',
+    title:'Every morning,\nthe full picture.',
+    body:'Sleep score with a full hypnogram and time/HR/SpO2 breakdown. Activity score with a clear grade. A Balance score blending stress reaction and recovery. HR and SpO2 trend graphs, plus an AI-generated daily insight that tells you what actually matters — no dashboard-reading required.',
+    img:'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=85', accent:PURPLE, align:'left'
+  },
+  {
+    tag:'Health',
+    title:'Deeper metrics,\nwhen you want them.',
+    body:'Steps, calories, and distance. VitalAge — a transparent fitness-age estimate, not a medical claim. Strain & Recovery, Metabolism Management, and full sleep detail. HR, SpO2, and HRV with day / week / month history. Stress score, VO2max estimate, and a temperature UI that’s ready for when sensor data is wired in.',
+    img:'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=1200&q=85', accent:TEAL, align:'right'
+  },
+  {
+    tag:'Honest By Design',
+    title:'No fabricated\nnumbers. Ever.',
+    body:'If a reading isn’t in yet, Signal Ring shows “––” instead of guessing. The same philosophy runs through women’s health: a manual calendar for logging period days — logged, not predicted, not guessed.',
+    img:'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1200&q=85', accent:GOLD,   align:'left'
+  },
+  {
+    tag:'Account',
+    title:'Yours, wherever\nyou sign in.',
+    body:'Real login and signup with email, cloud backup and sync across devices, and password reset by email. Want to look around first? Try demo mode — explore the full app before you ever pair a ring.',
+    img:'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=1200&q=85', accent:BLUE,   align:'right'
+  },
 ]
 
 const SPECS = [
-  { label:'Sensors',      value:'EEG · GSR · Temp · Mic array · Accelerometer' },
+  { label:'Sensors',      value:'Optical HR · SpO2 · Accelerometer · Temp-ready' },
   { label:'Battery',      value:'72 hrs continuous wear' },
-  { label:'AI Engine',    value:'yAtIverse AI-1 on-device' },
+  { label:'Insights',     value:'Daily AI-generated summary' },
   { label:'Connectivity', value:'Bluetooth 5.3 LE' },
   { label:'Materials',    value:'Grade 5 Titanium' },
   { label:'Sizes',        value:'5 · 6 · 7 · 8 · 9 · 10 · 11 · 12' },
   { label:'Water',        value:'IP68 — 100m rated' },
-  { label:'Privacy',      value:'100% on-device processing' },
+  { label:'App',          value:'Cloud sync · Demo mode' },
 ]
 
-const AI_CARDS = [
-  { icon:Cpu,    title:'On-device inference',   body:'Full AI-1 model runs locally. Your biometric data never leaves the ring.' },
-  { icon:Brain,  title:'Adaptive learning',     body:'The model updates every 24h based on your unique patterns and outcomes.' },
-  { icon:Shield, title:'Zero-knowledge design', body:'We cannot read your data. Cryptographic isolation at the hardware level.' },
+const TRUST_CARDS = [
+  { icon:ShieldCheck, title:'No fabricated numbers',     body:'If a metric isn’t measured yet, the app shows “––.” We’d rather show nothing than guess.' },
+  { icon:History,     title:'Full history, not just today', body:'HR, SpO2, and HRV tracked across day, week, and month views — so trends are visible, not just snapshots.' },
+  { icon:PlayCircle,  title:'Try before you pair',         body:'Demo mode lets you explore the entire yAtI app — Home, Health, everything — before your ring even arrives.' },
 ]
 
 /* ── Feature row ── */
@@ -112,7 +133,7 @@ export default function SignalRing() {
     <>
       <SEO
         title="Signal Ring — Wear the Signal"
-        description="The AI ring that reads your environment and shifts you into the mode you need — before you even ask. Six intelligent modes. 72-hour battery. Grade 5 Titanium."
+        description="The smart ring that tracks sleep, activity, and balance with honest numbers — real hypnograms, HR/SpO2/HRV history, VitalAge, and daily AI insights. No fabricated data, ever."
         path="/signal-ring"
         image="https://yAtIverse.com/og-signal-ring.png"
       />
@@ -122,7 +143,7 @@ export default function SignalRing() {
         "@context":"https://schema.org",
         "@type":"Product",
         "name":"yAtIverse Signal Ring",
-        "description":"AI-connected smart ring with 6 intelligent modes, 72-hour battery, and on-device AI-1 processing. Grade 5 Titanium build.",
+        "description":"Smart ring with sleep, activity, and Balance scores, HR/SpO2/HRV history, VitalAge, Strain & Recovery, and daily AI-generated insights — paired with the yAtI app. Grade 5 Titanium build.",
         "brand":{ "@type":"Brand", "name":"yAtIverse" },
         "offers":{ "@type":"Offer", "price":"149", "priceCurrency":"USD", "availability":"https://schema.org/PreOrder", "url":"https://yAtIverse.com/signal-ring" },
         "image":"https://yAtIverse.com/og-signal-ring.png",
@@ -160,7 +181,7 @@ export default function SignalRing() {
           </motion.h1>
 
           <motion.p {...heroEntrance(0.6)} className="font-body text-lg sm:text-xl max-w-xl mb-10 leading-relaxed text-white/65">
-            The AI ring that reads your environment and shifts you into the mode you need — before you even ask.
+            Real sleep, activity, and Balance scores — with honest numbers and daily insights, not guesses.
           </motion.p>
 
           <motion.div {...heroEntrance(0.75)} className="flex flex-col sm:flex-row gap-3 items-center">
@@ -186,19 +207,19 @@ export default function SignalRing() {
         </motion.div>
       </section>
 
-      {/* ── 2. MODES BREAK ── */}
+      {/* ── 2. HOME SIGNALS BREAK ── */}
       <section className="py-28 bg-black relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
           style={{ background:`radial-gradient(ellipse 50% 60% at 50% 50%, rgba(201,168,76,0.05), transparent 70%)` }} />
         <div className="max-w-5xl mx-auto px-4 text-center">
           <motion.h2 {...fadeUp(0)} className="font-display font-bold tracking-tight leading-[1.1] mb-12 text-white"
             style={{ fontSize:'clamp(2rem,5vw,4rem)' }}>
-            Six intelligent modes.{' '}
-            <span style={{ color:GOLD, textShadow:`0 0 40px rgba(201,168,76,0.4)` }}>One ring.</span>
-            <br /><span className="text-white/40">Zero effort.</span>
+            Everything your body's telling you.{' '}
+            <span style={{ color:GOLD, textShadow:`0 0 40px rgba(201,168,76,0.4)` }}>On one screen.</span>
+            <br /><span className="text-white/40">Zero guessing.</span>
           </motion.h2>
           <motion.div {...fadeUp(0.12)} className="flex flex-wrap justify-center gap-3">
-            {MODES.map(({ icon:Icon, label, color }) => (
+            {HOME_SIGNALS.map(({ icon:Icon, label, color }) => (
               <div key={label}
                 className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-mono transition-all duration-300 hover:scale-105"
                 style={{ border:`1px solid ${color}30`, color, background:`${color}0D` }}>
@@ -214,7 +235,7 @@ export default function SignalRing() {
         {FEATURES.map(f => <FeatureRow key={f.tag} feature={f} />)}
       </section>
 
-      {/* ── 4. AI-1 ENGINE ── */}
+      {/* ── 4. HONEST BY DESIGN ── */}
       <section className="py-28 relative overflow-hidden bg-[#0A0900]">
         <div className="absolute top-0 inset-x-0 h-px"
           style={{ background:`linear-gradient(to right, transparent, ${GOLD}40, transparent)` }} />
@@ -222,20 +243,20 @@ export default function SignalRing() {
           <div className="space-y-7">
             <motion.div {...fadeLeft(0)}>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono tracking-widest uppercase mb-5"
-                style={{ border:`1px solid ${BLUE}40`, color:BLUE, background:`${BLUE}0D` }}>AI-1 Engine</div>
+                style={{ border:`1px solid ${BLUE}40`, color:BLUE, background:`${BLUE}0D` }}>Design Ethos</div>
               <h2 className="font-display font-bold tracking-tight leading-[1.06] text-white mb-4"
                 style={{ fontSize:'clamp(2rem,4vw,3.2rem)' }}>
-                Learns you.{' '}
+                Real numbers.{' '}
                 <span style={{ background:`linear-gradient(135deg,${BLUE},${PURPLE},${GOLD})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
-                  Every day.
+                  Never fabricated.
                 </span>
               </h2>
               <p className="font-body text-base leading-relaxed text-white/58">
-                Signal Ring runs the yAtIverse AI-1 engine entirely on-device. No cloud. No latency. No privacy compromise. It builds a live model of your cognitive and physiological patterns — getting smarter every hour you wear it.
+                Every morning, the yAtI app turns your sleep, activity, and Balance data into a plain-language insight — no dashboard-reading required. And if a reading isn't in yet, it says so: you'll see "--" instead of a guessed number.
               </p>
             </motion.div>
             <motion.div {...fadeLeft(0.12)} className="space-y-3">
-              {AI_CARDS.map(({ icon:Icon, title, body }) => (
+              {TRUST_CARDS.map(({ icon:Icon, title, body }) => (
                 <div key={title} className="flex gap-4 p-4 rounded-2xl"
                   style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)' }}>
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -254,16 +275,16 @@ export default function SignalRing() {
           <motion.div {...scaleIn(0.15)} className="relative rounded-3xl overflow-hidden aspect-[4/5]"
             style={{ border:'1px solid rgba(255,255,255,0.08)' }}>
             <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=80"
-              alt="yAtIverse AI dashboard" className="w-full h-full object-cover" loading="lazy" />
+              alt="yAtI app dashboard" className="w-full h-full object-cover" loading="lazy" />
             <div className="absolute inset-0" style={{ background:'linear-gradient(to top, rgba(10,9,0,0.85) 0%, transparent 50%)' }} />
             <div className="absolute bottom-5 left-5 right-5 p-4 rounded-2xl"
               style={{ background:'rgba(10,9,0,0.88)', border:`1px solid ${GOLD}22`, backdropFilter:'blur(12px)' }}>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="font-mono text-[10px]" style={{ color:GOLD }}>AI-1 · Live</span>
-                <span className="font-mono text-[10px] text-white/35">Now</span>
+                <span className="font-mono text-[10px]" style={{ color:GOLD }}>Daily Insight</span>
+                <span className="font-mono text-[10px] text-white/35">This morning</span>
               </div>
-              <p className="font-display font-semibold text-sm text-white">Focus Mode activated</p>
-              <p className="font-body text-xs mt-0.5 text-white/48">Stress signal detected · Deep work window open</p>
+              <p className="font-display font-semibold text-sm text-white">Balance score: 82</p>
+              <p className="font-body text-xs mt-0.5 text-white/48">Recovery outpaced yesterday's stress — good day for deep work</p>
             </div>
           </motion.div>
         </div>
@@ -422,7 +443,7 @@ export default function SignalRing() {
           </motion.div>
 
           <motion.div {...fadeUp(0.18)} className="flex flex-wrap justify-center gap-6">
-            {['Free sizing kit included','Cancel anytime','Ships Q4 2026'].map(t => (
+            {['Free sizing kit included','Try demo mode first','Ships Q4 2026'].map(t => (
               <div key={t} className="flex items-center gap-2">
                 <div className="w-1 h-1 rounded-full" style={{ background:GOLD }} />
                 <span className="font-mono text-xs text-white/38">{t}</span>
