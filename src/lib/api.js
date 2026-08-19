@@ -85,3 +85,25 @@ export async function listOrders() {
   if (!res.ok) throw new Error(data.error || 'Could not load orders.')
   return data.orders || []
 }
+
+/** Whether a token is currently stored — used to gate the /dashboard route. */
+export function isAuthenticated() {
+  return Boolean(getToken())
+}
+
+/**
+ * Fetches the logged-in founder's Ring sync data.
+ * Expected shape (see yati-api-table-storage-reference.md, UserData table):
+ * { device, stepGoal, history, workouts }. Mirrors listOrders()'s pattern —
+ * same base URL, same Bearer token, same error handling.
+ */
+export async function fetchRingData() {
+  const token = getToken()
+  if (!token) throw new Error('Not logged in.')
+  const res = await fetch(`${API_BASE}/api/data`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(data.error || 'Could not load Ring data.')
+  return data
+}
