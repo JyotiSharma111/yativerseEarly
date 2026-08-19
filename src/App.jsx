@@ -13,6 +13,9 @@ import OSPage from './pages/os'
 import YATI from './pages/yAtI'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import CookiePolicy from './pages/CookiePolicy'
+import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
+import { AuthProvider, RequireAuth } from './lib/auth'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -22,7 +25,7 @@ function ScrollToTop() {
 
 export default function App() {
   return (
-    <>
+    <AuthProvider>
       <ScrollToTop />
       <Routes>
         <Route path="/"             element={<Homepage />}    />
@@ -38,7 +41,16 @@ export default function App() {
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/cookie-policy" element={<CookiePolicy />} />
          <Route path="/founder-os" element={<OSPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/dashboard"
+          element={
+            <RequireAuth>
+              <Dashboard />
+            </RequireAuth>
+          }
+        />
       </Routes>
-    </>
+    </AuthProvider>
   )
 }
