@@ -92,6 +92,26 @@ export function isAuthenticated() {
 }
 
 /**
+ * Creates a Stripe PaymentIntent covering every order in orderIds (one
+ * Stripe payment can cover several Orders rows — the Orders table has no
+ * multi-item concept, see yativerse-order-data-flow.md). The backend
+ * recomputes the charged amount itself from the stored order totals, so
+ * nothing client-side is trusted for the actual amount charged.
+ * Returns { clientSecret, totalCents, currency } — clientSecret is what
+ * Stripe Elements needs to mount the embedded Payment Element.
+ */
+export async function createPaymentIntent({ email, orderIds }) {
+  const res = await fetch(`${API_BASE}/api/create-payment-intent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, orderIds }),
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(data.error || 'Could not start payment.')
+  return data
+}
+
+/**
  * Fetches the logged-in founder's Ring sync data.
  * Expected shape (see yati-api-table-storage-reference.md, UserData table):
  * { device, stepGoal, history, workouts }. Mirrors listOrders()'s pattern —

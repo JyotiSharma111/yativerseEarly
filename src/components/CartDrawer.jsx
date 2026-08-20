@@ -132,7 +132,7 @@ export default function CartDrawer() {
                     <span className="text-white font-semibold">${centsToStr(subtotalCents)}</span>
                   </div>
                   <p className="font-body text-[11px] text-white/30">
-                    Payment isn't collected today — checkout reserves your order. We'll email you when Stripe checkout opens.
+                    Secure checkout, powered by Stripe — you'll pay on the next step, right here on yativerse.ai.
                   </p>
                   <Link
                     to="/checkout"
