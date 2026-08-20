@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ShoppingBag } from "lucide-react";
+import { useCart } from "../lib/cart";
 
 const MEGA = {
   wearables: {
@@ -62,6 +63,28 @@ const NAV_LINKS = [
   { label: "Digital C-Suite", href: "/agents", mega: "agents" },
   { label: "Founder-OS", href: "/founder-os" },
 ];
+
+function CartButton({ className = "" }) {
+  const { count, openCart } = useCart();
+  return (
+    <button
+      type="button"
+      onClick={openCart}
+      aria-label={`Open cart${count > 0 ? `, ${count} item${count === 1 ? "" : "s"}` : ""}`}
+      className={`relative flex items-center justify-center w-9 h-9 rounded-full text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors ${className}`}
+    >
+      <ShoppingBag className="w-[18px] h-[18px]" strokeWidth={1.75} />
+      {count > 0 && (
+        <span
+          className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-mono font-semibold text-black"
+          style={{ background: "#C9A84C" }}
+        >
+          {count > 9 ? "9+" : count}
+        </span>
+      )}
+    </button>
+  );
+}
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -171,17 +194,20 @@ export default function Navbar() {
           >
             Sign in
           </Link>
+          <CartButton />
           <Link to="/waitlist" className="btn-primary !py-2.5 !px-5 !text-xs">
             Join yAtIverse →
           </Link>
         </div>
 
-        {/* Hamburger */}
-        <button
-          className="lg:hidden flex flex-col gap-[5px] p-2"
-          onClick={() => setMobile(!mobileOpen)}
-          aria-label="Menu"
-        >
+        {/* Mobile: cart + hamburger */}
+        <div className="flex lg:hidden items-center gap-1">
+          <CartButton />
+          <button
+            className="flex flex-col gap-[5px] p-2"
+            onClick={() => setMobile(!mobileOpen)}
+            aria-label="Menu"
+          >
           <span
             className={`block w-5 h-0.5 bg-white/75 rounded transition-all duration-250 ${mobileOpen ? "rotate-45 translate-y-[7px]" : ""}`}
           />
@@ -191,7 +217,8 @@ export default function Navbar() {
           <span
             className={`block w-5 h-0.5 bg-white/75 rounded transition-all duration-250 ${mobileOpen ? "-rotate-45 -translate-y-[7px]" : ""}`}
           />
-        </button>
+          </button>
+        </div>
 
         {/* Mega menus */}
         {Object.entries(MEGA).map(([key, data]) => (
