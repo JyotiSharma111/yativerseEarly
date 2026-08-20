@@ -96,6 +96,16 @@ export function isAuthenticated() {
  * Expected shape (see yati-api-table-storage-reference.md, UserData table):
  * { device, stepGoal, history, workouts }. Mirrors listOrders()'s pattern —
  * same base URL, same Bearer token, same error handling.
+ *
+ * The real response has been observed to not always match that shape —
+ * confirmed in production: a successful (2xx) response whose top-level
+ * `history`/`workouts` come back missing rather than as arrays, most likely
+ * because the account hasn't synced from the Ring app yet, or because the
+ * API returns the stored `dataJson` field as a still-JSON-encoded string
+ * instead of already-parsed fields. This function normalizes either case
+ * so callers can always trust `history`/`workouts` are arrays and never
+ * crash on `.length`/`.map` — see StepsCard/WorkoutsCard for the matching
+ * empty-state UI when there's genuinely no data yet.
  */
 export async function fetchRingData() {
   const token = getToken()
@@ -105,5 +115,22 @@ export async function fetchRingData() {
   })
   const data = await parseJson(res)
   if (!res.ok) throw new Error(data.error || 'Could not load Ring data.')
-  return data
+
+  // Unwrap dataJson if the API returns the raw Table Storage entity (where
+  // the sync payload is a JSON-encoded string) instead of parsed fields.
+  let payload = data
+  if (typeof data?.dataJson === 'string') {
+    try {
+      payload = JSON.parse(data.dataJson)
+    } catch {
+      payload = {}
+    }
+  }
+
+  return {
+    device: payload?.device ?? null,
+    stepGoal: typeof payload?.stepGoal === 'number' ? payload.stepGoal : null,
+    history: Array.isArray(payload?.history) ? payload.history : [],
+    workouts: Array.isArray(payload?.workouts) ? payload.workouts : [],
+  }
 }

@@ -12,6 +12,8 @@ function timeAgo(iso) {
 }
 
 export default function WorkoutsCard({ workouts, device }) {
+  const safeWorkouts = Array.isArray(workouts) ? workouts : [];
+
   return (
     <div className="flex flex-col gap-5 rounded-2xl border border-white/5 bg-white/[0.03] p-6">
       <div className="flex items-center justify-between">
@@ -31,11 +33,11 @@ export default function WorkoutsCard({ workouts, device }) {
         </div>
       </div>
 
-      {workouts.length === 0 ? (
+      {safeWorkouts.length === 0 ? (
         <p className="py-6 text-center text-sm text-white/30">No workouts logged yet.</p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {workouts.map((w) => (
+          {safeWorkouts.map((w) => (
             <li
               key={w.id}
               className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3"
