@@ -107,7 +107,7 @@ export default function Order() {
     <>
       <SEO
         title="Shop Signal Ring — yAtIverse"
-        description="Choose your finish and size, add your Signal Ring to cart, and reserve it — pay when checkout opens."
+        description="Choose your finish and size, add your Signal Ring to cart, and check out securely with Stripe."
         path="/order"
       />
 
@@ -178,7 +178,7 @@ export default function Order() {
                 <p className="font-mono text-[11px] tracking-widest uppercase text-white/38 mb-2">Signal Ring</p>
                 <div className="flex items-baseline gap-3 mb-6">
                   <span className="font-display font-bold text-3xl text-white">${(UNIT_PRICE_CENTS / 100).toFixed(0)}</span>
-                  <span className="font-body text-sm text-white/40">Founder pricing — reserve now</span>
+                  <span className="font-body text-sm text-white/40">Founder pricing — order now</span>
                 </div>
 
                 <div className="rounded-3xl p-6 mb-6" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -247,7 +247,7 @@ export default function Order() {
                 <div className="mt-6 rounded-2xl px-5 py-4 flex items-start gap-3" style={{ background: `${BLUE}0D`, border: `1px solid ${BLUE}25` }}>
                   <Lock className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: BLUE }} />
                   <p className="font-body text-xs text-white/55 leading-relaxed">
-                    Payment isn't collected today — Stripe checkout is being set up. Placing your order at checkout reserves it with your details; we'll email you to complete payment once checkout opens.
+                    Secure checkout, powered by Stripe. You'll enter shipping and payment details on the next step — right here on yativerse.ai, no redirect.
                   </p>
                 </div>
               </motion.div>

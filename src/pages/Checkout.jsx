@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, Check, Lock, ShoppingBag } from 'lucide-react'
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
+import { ArrowRight, Check, Lock, ShoppingBag, ShieldCheck } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import SEO from '../components/SEO'
 import { fadeUp, fadeLeft, fadeRight } from '../lib/motion'
-import { createOrder, register, getStoredEmail, getToken } from '../lib/api'
+import { createOrder, createPaymentIntent, register, getStoredEmail, getToken } from '../lib/api'
+import { getStripe } from '../lib/stripe'
 import { useCart } from '../lib/cart'
 
 const GOLD  = '#C9A84C'
@@ -17,16 +19,133 @@ function centsToStr(cents) {
   return (cents / 100).toFixed(2)
 }
 
+const STRIPE_APPEARANCE = {
+  theme: 'night',
+  variables: {
+    colorPrimary: GOLD,
+    colorBackground: '#14120a',
+    colorText: '#ffffff',
+    colorTextSecondary: 'rgba(255,255,255,0.55)',
+    colorDanger: '#FF6B8A',
+    fontFamily: '"DM Sans", ui-sans-serif, system-ui, sans-serif',
+    borderRadius: '12px',
+    spacingUnit: '4px',
+  },
+  rules: {
+    '.Input': { border: '1px solid rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.05)' },
+    '.Input:focus': { border: `1px solid ${GOLD}80` },
+    '.Label': { color: 'rgba(255,255,255,0.55)', fontSize: '12px' },
+    '.Tab': { border: '1px solid rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.03)' },
+    '.Tab--selected': { border: `1px solid ${GOLD}60` },
+  },
+}
+
+/** The actual card-entry form, mounted once a clientSecret exists. */
+function PaymentForm({ totalCents, onSuccess }) {
+  const stripe = useStripe()
+  const elements = useElements()
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!stripe || !elements) return
+    setError('')
+    setSubmitting(true)
+
+    // redirect: 'if_required' keeps the customer on yativerse.ai for the
+    // vast majority of cards — Stripe only navigates away for payment
+    // methods that have no in-page confirmation path at all, which card
+    // payments (the only method this checkout offers) essentially never
+    // hit. 3-D Secure challenges, when a card requires one, show as an
+    // in-page modal via Stripe.js, not a full-page redirect.
+    const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      redirect: 'if_required',
+    })
+
+    if (confirmError) {
+      setError(confirmError.message || 'Payment failed. Please check your card details and try again.')
+      setSubmitting(false)
+      return
+    }
+
+    if (paymentIntent && paymentIntent.status === 'succeeded') {
+      onSuccess()
+      return
+    }
+
+    if (paymentIntent && paymentIntent.status === 'processing') {
+      setError("Your payment is processing — we'll email you the moment it's confirmed. You can safely close this page.")
+      setSubmitting(false)
+      return
+    }
+
+    setError('Payment did not complete. Please try again.')
+    setSubmitting(false)
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-5">
+      <PaymentElement />
+      {error && (
+        <p className="font-body text-sm text-center" style={{ color: '#FF6B8A' }}>{error}</p>
+      )}
+      <button type="submit" disabled={!stripe || submitting}
+        className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-full font-display font-bold text-sm text-black transition-all duration-300 hover:scale-[1.01] disabled:opacity-50"
+        style={{ background: `linear-gradient(135deg,${GOLD},${GOLD2})`, boxShadow: `0 0 30px rgba(201,168,76,0.3)` }}>
+        {submitting ? 'Processing…' : `Pay $${centsToStr(totalCents)}`} <Lock className="w-4 h-4" />
+      </button>
+      <p className="font-body text-[11px] text-white/30 text-center flex items-center justify-center gap-1.5">
+        <ShieldCheck className="w-3 h-3" /> Payment processed securely by Stripe — your card details never touch yativerse.ai's servers.
+      </p>
+    </form>
+  )
+}
+
 export default function Checkout() {
   const { items, subtotalCents, removeItems, clear } = useCart()
 
+  const [phase, setPhase] = useState('shipping') // 'shipping' | 'payment' | 'done'
   const [form, setForm] = useState({
     name: '', email: '', phone: '',
     addressLine1: '', addressLine2: '', city: '', state: '', zip: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [results, setResults] = useState(null) // [{ item, orderId, totalCents }] once placed
+  const [placedOrders, setPlacedOrders] = useState(null) // [{ item, orderId, totalCents }]
+  const [clientSecret, setClientSecret] = useState(null)
+
+  // Resolved once, client-side: 'loading' | 'ready' | 'unavailable'.
+  // getStripe() returns a promise that resolves to null both when
+  // VITE_STRIPE_PUBLISHABLE_KEY is missing and when the js.stripe.com
+  // script itself fails to load (blocked network, ad/privacy blocker) —
+  // either way, tracking this explicitly means the payment step can show
+  // one clear "payment isn't available" message instead of hanging in a
+  // hidden hang state that <Elements stripe={somePromise}> doesn't surface.
+  const [stripeState, setStripeState] = useState('loading')
+  const [stripeInstance, setStripeInstance] = useState(null)
+
+  useEffect(() => {
+    const promise = getStripe()
+    if (!promise) {
+      setStripeState('unavailable')
+      return
+    }
+    let cancelled = false
+    promise.then((stripe) => {
+      if (cancelled) return
+      if (stripe) {
+        setStripeInstance(stripe)
+        setStripeState('ready')
+      } else {
+        setStripeState('unavailable')
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Post-order optional account creation
   const [password, setPassword] = useState('')
@@ -36,7 +155,23 @@ export default function Checkout() {
 
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
-  const submit = async (e) => {
+  const startPaymentIntent = async (orders, email) => {
+    setError('')
+    try {
+      const { clientSecret: secret } = await createPaymentIntent({
+        email,
+        orderIds: orders.map((o) => o.orderId),
+      })
+      setClientSecret(secret)
+    } catch (err) {
+      // Orders already exist at this point (they succeeded below) — no
+      // need to touch the cart again. Just let the payment phase show the
+      // error with a retry button that re-attempts this same call.
+      setError(err.message)
+    }
+  }
+
+  const submitShipping = async (e) => {
     e.preventDefault()
     setError('')
     setSubmitting(true)
@@ -55,21 +190,19 @@ export default function Checkout() {
           placed.push({ item, orderId: result.orderId, totalCents: result.totalCents ?? item.unitPriceCents * item.qty })
           succeededIds.push(item.id)
         } catch (err) {
-          // Stop here — remove what already succeeded from the cart so the
-          // user isn't double-charged/double-reserved on retry, but leave
-          // this item and anything after it in the cart.
           if (succeededIds.length) removeItems(succeededIds)
-          if (placed.length) setResults(placed) // partial success: show what did go through
           throw new Error(
             placed.length
-              ? `${item.name} (${item.colorName}, size ${item.size}) couldn't be reserved: ${err.message}. The item(s) above were reserved — the rest are still in your cart.`
+              ? `${item.name} (${item.colorName}, size ${item.size}) couldn't be reserved: ${err.message}. The item(s) before it went through — the rest are still in your cart.`
               : err.message,
           )
         }
       }
-      // everything succeeded
+      // Every cart item became an order — clear the cart and move to payment.
       clear()
-      setResults(placed)
+      setPlacedOrders(placed)
+      setPhase('payment')
+      await startPaymentIntent(placed, form.email)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -91,13 +224,13 @@ export default function Checkout() {
     }
   }
 
-  const grandTotalCents = results ? results.reduce((sum, r) => sum + r.totalCents, 0) : subtotalCents
+  const grandTotalCents = placedOrders ? placedOrders.reduce((sum, r) => sum + r.totalCents, 0) : subtotalCents
 
   return (
     <>
       <SEO
         title="Checkout — yAtIverse"
-        description="Review your Signal Ring order and reserve it — pay when checkout opens."
+        description="Review your Signal Ring order and pay securely with Stripe."
         path="/checkout"
       />
       <div className="bg-brand-bg text-white min-h-screen">
@@ -114,16 +247,16 @@ export default function Checkout() {
                 Checkout
               </div>
               <h1 className="font-display font-bold tracking-tight text-white mb-3" style={{ fontSize: 'clamp(2rem,4.5vw,3.2rem)' }}>
-                Review & <span style={{ color: GOLD }}>reserve.</span>
+                {phase === 'done' ? <>Order <span style={{ color: GOLD }}>confirmed.</span></> : <>Review & <span style={{ color: GOLD }}>pay.</span></>}
               </h1>
-              {!results && (
+              {phase === 'shipping' && (
                 <p className="font-body text-white/55 max-w-lg mx-auto">
-                  Payment isn't open yet — reserving today locks your details in. We'll email you the moment checkout goes live.
+                  Enter your shipping details, then pay securely on the next step — everything happens right here on yativerse.ai.
                 </p>
               )}
             </motion.div>
 
-            {results ? (
+            {phase === 'done' ? (
               /* ── CONFIRMATION ── */
               <motion.div {...fadeUp(0.1)} className="max-w-md mx-auto rounded-3xl p-8 text-center"
                 style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${GOLD}30` }}>
@@ -131,10 +264,11 @@ export default function Checkout() {
                   style={{ background: `${GOLD}18`, border: `1px solid ${GOLD}40` }}>
                   <Check className="w-6 h-6" style={{ color: GOLD }} />
                 </div>
-                <h2 className="font-display font-bold text-2xl text-white mb-2">You're reserved.</h2>
+                <h2 className="font-display font-bold text-2xl text-white mb-2">Payment successful.</h2>
+                <p className="font-body text-sm text-white/45 mb-4">You're all set — a confirmation email is on its way.</p>
 
                 <div className="text-left space-y-2 mb-4">
-                  {results.map((r) => (
+                  {placedOrders.map((r) => (
                     <div key={r.orderId} className="rounded-xl px-4 py-3 flex items-center justify-between"
                       style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
                       <div>
@@ -147,12 +281,8 @@ export default function Checkout() {
                 </div>
 
                 <p className="font-body text-sm text-white/55 mb-6">
-                  Total due at checkout: <span className="text-white font-semibold">${centsToStr(grandTotalCents)}</span>
+                  Total charged: <span className="text-white font-semibold">${centsToStr(grandTotalCents)}</span>
                 </p>
-
-                {error && (
-                  <p className="font-body text-xs mb-4" style={{ color: '#FF6B8A' }}>{error}</p>
-                )}
 
                 {accountDone ? (
                   <div className="rounded-2xl px-4 py-3 text-sm font-body" style={{ background: `${BLUE}12`, border: `1px solid ${BLUE}30`, color: '#fff' }}>
@@ -182,6 +312,61 @@ export default function Checkout() {
                   Back to yativerse.ai <ArrowRight className="w-3 h-3" />
                 </Link>
               </motion.div>
+            ) : phase === 'payment' ? (
+              /* ── PAYMENT ── */
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <motion.div {...fadeLeft(0.05)} className="lg:col-span-3 space-y-6">
+                  <div className="rounded-3xl p-6" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <p className="font-mono text-[10px] tracking-widest uppercase text-white/38 mb-4">Payment</p>
+                    {error ? (
+                      <div className="space-y-4">
+                        <p className="font-body text-sm text-center" style={{ color: '#FF6B8A' }}>{error}</p>
+                        <button type="button" onClick={() => startPaymentIntent(placedOrders, form.email)}
+                          className="w-full py-3 rounded-full font-display font-semibold text-sm text-black transition-all"
+                          style={{ background: `linear-gradient(135deg,${GOLD},${GOLD2})` }}>
+                          Retry payment
+                        </button>
+                        <p className="font-body text-[11px] text-white/30 text-center">
+                          Your order (Order ID{placedOrders.length > 1 ? 's' : ''}: {placedOrders.map((o) => o.orderId).join(', ')}) is already saved — retrying here won't create a duplicate.
+                        </p>
+                      </div>
+                    ) : stripeState === 'unavailable' ? (
+                      <p className="font-body text-sm text-center" style={{ color: '#FF6B8A' }}>
+                        Payment couldn't load (missing Stripe configuration, or a network/browser extension blocked it). Your order is saved — contact support@yativerse.ai to complete payment, or try reloading this page.
+                      </p>
+                    ) : clientSecret && stripeState === 'ready' ? (
+                      <Elements stripe={stripeInstance} options={{ clientSecret, appearance: STRIPE_APPEARANCE }}>
+                        <PaymentForm totalCents={grandTotalCents} onSuccess={() => setPhase('done')} />
+                      </Elements>
+                    ) : (
+                      <p className="font-body text-sm text-white/40 text-center py-6">Preparing secure payment…</p>
+                    )}
+                  </div>
+                </motion.div>
+
+                <motion.div {...fadeRight(0.1)} className="lg:col-span-2 space-y-6">
+                  <div className="rounded-3xl p-6 sticky top-24" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <p className="font-mono text-[10px] tracking-widest uppercase text-white/38 mb-4">Order summary</p>
+                    <div className="space-y-3 mb-4">
+                      {placedOrders.map((r) => (
+                        <div key={r.orderId} className="flex gap-3 items-center">
+                          <img src={r.item.image} alt={r.item.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-body text-xs text-white/80 truncate">{r.item.name} — {r.item.colorName}</p>
+                            <p className="font-body text-[11px] text-white/40">Size {r.item.size} × {r.item.qty}</p>
+                          </div>
+                          <span className="font-body text-sm text-white/70 flex-shrink-0">${centsToStr(r.totalCents)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="h-px my-4" style={{ background: 'rgba(255,255,255,0.08)' }} />
+                    <div className="flex justify-between font-display font-bold text-white text-lg">
+                      <span>Total</span>
+                      <span>${centsToStr(grandTotalCents)}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
             ) : items.length === 0 ? (
               /* ── EMPTY CART ── */
               <motion.div {...fadeUp(0.1)} className="max-w-md mx-auto rounded-3xl p-10 text-center"
@@ -199,9 +384,9 @@ export default function Checkout() {
                 </Link>
               </motion.div>
             ) : (
-              /* ── CHECKOUT FORM ── */
+              /* ── SHIPPING FORM ── */
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                <motion.form {...fadeLeft(0.05)} onSubmit={submit} className="lg:col-span-3 space-y-6">
+                <motion.form {...fadeLeft(0.05)} onSubmit={submitShipping} className="lg:col-span-3 space-y-6">
                   <div className="rounded-3xl p-6 space-y-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
                     <p className="font-mono text-[10px] tracking-widest uppercase text-white/38">Shipping details</p>
                     <div className="grid grid-cols-2 gap-3">
@@ -226,9 +411,9 @@ export default function Checkout() {
                   </div>
 
                   <div className="rounded-2xl px-5 py-4 flex items-start gap-3" style={{ background: `${BLUE}0D`, border: `1px solid ${BLUE}25` }}>
-                    <Lock className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: BLUE }} />
+                    <ShieldCheck className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: BLUE }} />
                     <p className="font-body text-xs text-white/55 leading-relaxed">
-                      Payment isn't collected today — Stripe checkout is being set up. Submitting reserves the item(s) below with the details above; we'll email you to complete payment once checkout opens.
+                      Next step is secure payment, powered by Stripe — right here on yativerse.ai, no redirect. Your card details are never seen by our servers.
                     </p>
                   </div>
 
@@ -239,11 +424,10 @@ export default function Checkout() {
                   <button type="submit" disabled={submitting}
                     className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-full font-display font-bold text-sm text-black transition-all duration-300 hover:scale-[1.01] disabled:opacity-50"
                     style={{ background: `linear-gradient(135deg,${GOLD},${GOLD2})`, boxShadow: `0 0 30px rgba(201,168,76,0.3)` }}>
-                    {submitting ? 'Reserving…' : `Reserve ${items.length > 1 ? 'my items' : 'my ring'}`} <ArrowRight className="w-4 h-4" />
+                    {submitting ? 'Preparing payment…' : 'Continue to payment'} <ArrowRight className="w-4 h-4" />
                   </button>
                 </motion.form>
 
-                {/* Right: order summary */}
                 <motion.div {...fadeRight(0.1)} className="lg:col-span-2 space-y-6">
                   <div className="rounded-3xl p-6 sticky top-24" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
                     <p className="font-mono text-[10px] tracking-widest uppercase text-white/38 mb-4">Order summary</p>
@@ -259,16 +443,11 @@ export default function Checkout() {
                         </div>
                       ))}
                     </div>
-                    <div className="flex justify-between font-body text-sm text-white/40 mb-4">
-                      <span>Sizing kit</span>
-                      <span>Free</span>
-                    </div>
                     <div className="h-px my-4" style={{ background: 'rgba(255,255,255,0.08)' }} />
                     <div className="flex justify-between font-display font-bold text-white text-lg">
                       <span>Total</span>
                       <span>${centsToStr(subtotalCents)}</span>
                     </div>
-                    <p className="font-body text-[11px] text-white/30 mt-2">Due at checkout, not today.</p>
                   </div>
                 </motion.div>
               </div>

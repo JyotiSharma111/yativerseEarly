@@ -1,0 +1,6 @@
+# SPA fallback for Cloudflare Pages — without this, a direct load or
+# refresh on any route other than "/" (e.g. /order, /checkout, /dashboard)
+# 404s, because there's no real server-side route for it — React Router
+# handles it client-side once index.html loads. Mirrors vercel.json's
+# rewrites rule for the Vercel deploy.
+/*   /index.html   200
