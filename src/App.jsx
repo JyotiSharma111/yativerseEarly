@@ -15,6 +15,8 @@ import YATI from './pages/yAtI'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import CookiePolicy from './pages/CookiePolicy'
 import Login from './pages/Login'
+import Signup from './pages/Signup'
+import ForgotPassword from './pages/ForgotPassword'
 import Dashboard from './pages/Dashboard'
 import { AuthProvider, RequireAuth } from './lib/auth'
 import { CartProvider } from './lib/cart'
@@ -47,6 +49,8 @@ export default function App() {
           <Route path="/cookie-policy" element={<CookiePolicy />} />
            <Route path="/founder-os" element={<OSPage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route
             path="/dashboard"
             element={
