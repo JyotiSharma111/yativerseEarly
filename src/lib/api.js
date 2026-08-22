@@ -61,6 +61,37 @@ export async function register(email, password) {
   return data
 }
 
+/**
+ * Requests a password-reset code be emailed to this address — same
+ * endpoint the yAtI app uses (see PasswordResets table in
+ * yati-api-table-storage-reference.md: a 6-digit code, 15-minute expiry,
+ * one active code per email). Deliberately does not distinguish "no such
+ * account" from "code sent" in the UI layer — that's for the backend to
+ * decide; this client just surfaces whatever it returns.
+ */
+export async function forgotPassword(email) {
+  const res = await fetch(`${API_BASE}/api/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(data.error || 'Could not send a reset code. Please try again.')
+  return data
+}
+
+/** Completes a password reset using the code emailed by forgotPassword(). */
+export async function resetPassword(email, code, newPassword) {
+  const res = await fetch(`${API_BASE}/api/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code, newPassword }),
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(data.error || 'Could not reset your password. Check the code and try again.')
+  return data
+}
+
 /** Logs in — same endpoint the yAtI app uses. */
 export async function login(email, password) {
   const res = await fetch(`${API_BASE}/api/login`, {

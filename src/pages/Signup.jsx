@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { LogIn, AlertCircle, Sparkles, Eye, EyeOff } from "lucide-react";
+import { UserPlus, AlertCircle, Eye, EyeOff } from "lucide-react";
 import SEO from "../components/SEO";
 import { fadeUp } from "../lib/motion";
-import { login } from "../lib/api";
-import { useAuth, enterDemoMode } from "../lib/auth";
+import { register } from "../lib/api";
+import { useAuth } from "../lib/auth";
 
-const GOLD = "#C9A84C";
-
-export default function Login() {
+export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -25,27 +24,31 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("Passwords don't match.");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await login(email.trim().toLowerCase(), password);
+      await register(email.trim().toLowerCase(), password);
       refresh();
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      setError(err.message || "Login failed. Check your email and password.");
+      setError(err.message || "Could not create your account. Please try again.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  function handleDemo() {
-    enterDemoMode();
-    refresh();
-    navigate(redirectTo, { replace: true });
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-brand-bg px-5 py-16 font-body text-white">
-      <SEO title="Log in — yAtIverse" description="Log in to your Founder Command Center." />
+      <SEO title="Sign up — yAtIverse" description="Create your yAtIverse account." />
 
       <motion.div {...fadeUp(0)} className="w-full max-w-md">
         <Link to="/" className="mb-8 flex items-center justify-center gap-2">
@@ -54,9 +57,9 @@ export default function Login() {
         </Link>
 
         <div className="rounded-3xl border border-white/5 bg-white/[0.03] p-8">
-          <h1 className="font-display text-2xl font-extrabold text-white">Welcome back</h1>
+          <h1 className="font-display text-2xl font-extrabold text-white">Create your account</h1>
           <p className="mt-1.5 text-sm text-white/40">
-            Log in with your yAtIverse account to see your Ring data.
+            One account works everywhere — the yativerse.ai storefront and the yAtI app, same email and password.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
@@ -72,19 +75,15 @@ export default function Login() {
               />
             </div>
             <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label className="block text-xs font-medium text-white/50">Password</label>
-                <Link to="/forgot-password" className="text-xs font-medium text-white/40 hover:text-white/70">
-                  Forgot password?
-                </Link>
-              </div>
+              <label className="mb-1.5 block text-xs font-medium text-white/50">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   required
+                  minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="At least 8 characters"
                   className="w-full rounded-xl border border-white/10 bg-brand-bg2 px-4 py-2.5 pr-10 text-sm text-white placeholder-white/25 outline-none focus:border-brand-purple/50"
                 />
                 <button
@@ -96,6 +95,17 @@ export default function Login() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-white/50">Confirm password</label>
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-xl border border-white/10 bg-brand-bg2 px-4 py-2.5 text-sm text-white placeholder-white/25 outline-none focus:border-brand-purple/50"
+              />
             </div>
 
             {error && (
@@ -110,29 +120,15 @@ export default function Login() {
               disabled={submitting}
               className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-grad-brand px-4 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <LogIn size={16} />
-              {submitting ? "Logging in…" : "Log in"}
+              <UserPlus size={16} />
+              {submitting ? "Creating account…" : "Create account"}
             </button>
           </form>
 
-          <div className="my-5 flex items-center gap-3">
-            <div className="h-px flex-1 bg-white/10" />
-            <span className="text-[11px] uppercase tracking-wide text-white/25">or</span>
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
-
-          <button
-            onClick={handleDemo}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm font-medium text-white/70 transition hover:border-white/20 hover:text-white"
-          >
-            <Sparkles size={15} style={{ color: GOLD }} />
-            Continue with sample data
-          </button>
-
           <p className="mt-6 text-center text-xs text-white/40">
-            Don't have an account?{" "}
-            <Link to="/signup" className="font-medium text-white/70 hover:text-white">
-              Sign up
+            Already have an account?{" "}
+            <Link to="/login" className="font-medium text-white/70 hover:text-white">
+              Log in
             </Link>
           </p>
         </div>
