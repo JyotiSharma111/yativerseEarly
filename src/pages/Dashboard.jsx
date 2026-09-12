@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Users,
   BarChart3,
   ListChecks,
   ShieldCheck,
@@ -13,6 +12,7 @@ import TopBar from "../components/dashboard/TopBar";
 import StepsCard from "../components/dashboard/StepsCard";
 import WorkoutsCard from "../components/dashboard/WorkoutsCard";
 import ComingSoonCard from "../components/dashboard/ComingSoonCard";
+import AgentsLaunchCard from "../components/dashboard/AgentsLaunchCard";
 import { useAuth } from "../lib/auth";
 import { fetchRingData } from "../lib/api";
 import { SAMPLE_RING_DATA } from "../lib/sampleRingData";
@@ -23,12 +23,6 @@ const COMING_SOON = [
     title: "Today's Priorities",
     phase: "Phase 2",
     description: "Founder OS Lite turns your Ring recovery + calendar into one daily brief.",
-  },
-  {
-    icon: Users,
-    title: "AI Agents",
-    phase: "Phase 3",
-    description: "Revenue, Content, and Research agents — approval-gated, nothing auto-sends.",
   },
   {
     icon: BarChart3,
@@ -123,6 +117,10 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <StepsCard history={ringData.history} stepGoal={ringData.stepGoal} />
               <WorkoutsCard workouts={ringData.workouts} device={ringData.device} />
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+              <AgentsLaunchCard />
             </div>
 
             <div className="mb-3 mt-8 text-xs font-semibold uppercase tracking-wider text-white/25">
