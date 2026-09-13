@@ -143,20 +143,45 @@ export async function createPaymentIntent({ email, orderIds }) {
 }
 
 /**
+ * The yAtI mobile app stores daily history as a date-keyed object —
+ * { "2026-09-10": { steps, sleepMin, restHr, ... }, "2026-09-11": {...} } —
+ * see Map<String,dynamic> _history in ring_controller.dart. That's exactly
+ * what gets synced to Azure and exactly what /api/data hands back: a real
+ * object, never an array. StepsCard/WorkoutsCard expect an array ordered
+ * oldest-to-newest (see SAMPLE_RING_DATA), so this turns the real shape
+ * into that shape instead of discarding it.
+ *
+ * Root cause of the "dashboard shows no data despite a successful sync"
+ * bug (confirmed Sept 2026): fetchRingData() used to do
+ * `Array.isArray(payload?.history) ? payload.history : []`, which is false
+ * for every real synced account (since history is always an object here),
+ * so it silently returned [] even when Azure had the real data. Nothing
+ * wrong with the sync, the token, or the account — just this parsing step.
+ */
+function normalizeHistory(history) {
+  if (Array.isArray(history)) return history
+  if (history && typeof history === 'object') {
+    return Object.entries(history)
+      .map(([date, entry]) => ({ date, ...(entry && typeof entry === 'object' ? entry : {}) }))
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+  }
+  return []
+}
+
+/**
  * Fetches the logged-in founder's Ring sync data.
  * Expected shape (see yati-api-table-storage-reference.md, UserData table):
  * { device, stepGoal, history, workouts }. Mirrors listOrders()'s pattern —
  * same base URL, same Bearer token, same error handling.
  *
  * The real response has been observed to not always match that shape —
- * confirmed in production: a successful (2xx) response whose top-level
- * `history`/`workouts` come back missing rather than as arrays, most likely
- * because the account hasn't synced from the Ring app yet, or because the
- * API returns the stored `dataJson` field as a still-JSON-encoded string
- * instead of already-parsed fields. This function normalizes either case
- * so callers can always trust `history`/`workouts` are arrays and never
- * crash on `.length`/`.map` — see StepsCard/WorkoutsCard for the matching
- * empty-state UI when there's genuinely no data yet.
+ * confirmed in production: the API returns the stored `dataJson` field as a
+ * still-JSON-encoded string instead of already-parsed fields in some cases.
+ * This function normalizes that case, and normalizes `history`'s real
+ * object shape via normalizeHistory() above, so callers can always trust
+ * `history`/`workouts` are arrays and never crash on `.length`/`.map` — see
+ * StepsCard/WorkoutsCard for the matching empty-state UI when there's
+ * genuinely no data yet.
  */
 export async function fetchRingData() {
   const token = getToken()
@@ -181,7 +206,7 @@ export async function fetchRingData() {
   return {
     device: payload?.device ?? null,
     stepGoal: typeof payload?.stepGoal === 'number' ? payload.stepGoal : null,
-    history: Array.isArray(payload?.history) ? payload.history : [],
+    history: normalizeHistory(payload?.history),
     workouts: Array.isArray(payload?.workouts) ? payload.workouts : [],
   }
 }
