@@ -170,18 +170,22 @@ function normalizeHistory(history) {
 
 /**
  * Fetches the logged-in founder's Ring sync data.
- * Expected shape (see yati-api-table-storage-reference.md, UserData table):
- * { device, stepGoal, history, workouts }. Mirrors listOrders()'s pattern —
- * same base URL, same Bearer token, same error handling.
  *
- * The real response has been observed to not always match that shape —
- * confirmed in production: the API returns the stored `dataJson` field as a
- * still-JSON-encoded string instead of already-parsed fields in some cases.
- * This function normalizes that case, and normalizes `history`'s real
- * object shape via normalizeHistory() above, so callers can always trust
- * `history`/`workouts` are arrays and never crash on `.length`/`.map` — see
- * StepsCard/WorkoutsCard for the matching empty-state UI when there's
- * genuinely no data yet.
+ * The real /api/data response (confirmed Sept 2026 from a live Network tab
+ * capture, matching getDataHandler in dataCore.js) is wrapped one level
+ * deep: { data: { device, stepGoal, history, workouts } }. This function
+ * used to only unwrap a *different*, hypothetical shape — a raw Table
+ * Storage entity with a JSON-encoded `dataJson` string field — and never
+ * checked for this actual `{ data: {...} }` wrapper. So `payload` stayed
+ * as the outer object, `payload.history` etc. were always undefined, and
+ * every field silently fell back to its empty default — regardless of how
+ * much real data was sitting in Azure. Handles all three shapes now: the
+ * real wrapped one, the legacy raw-entity one, and an already-flat one.
+ *
+ * `history`'s own shape is normalized separately via normalizeHistory()
+ * above, so callers can always trust `history`/`workouts` are arrays and
+ * never crash on `.length`/`.map` — see StepsCard/WorkoutsCard for the
+ * matching empty-state UI when there's genuinely no data yet.
  */
 export async function fetchRingData() {
   const token = getToken()
@@ -189,18 +193,20 @@ export async function fetchRingData() {
   const res = await fetch(`${API_BASE}/api/data`, {
     headers: { Authorization: `Bearer ${token}` },
   })
-  const data = await parseJson(res)
-  if (!res.ok) throw new Error(data.error || 'Could not load Ring data.')
+  const parsed = await parseJson(res)
+  if (!res.ok) throw new Error(parsed.error || 'Could not load Ring data.')
 
-  // Unwrap dataJson if the API returns the raw Table Storage entity (where
-  // the sync payload is a JSON-encoded string) instead of parsed fields.
-  let payload = data
-  if (typeof data?.dataJson === 'string') {
+  let payload = parsed
+  if (typeof parsed?.dataJson === 'string') {
+    // Legacy shape: a raw Table Storage entity, sync payload still JSON-encoded.
     try {
-      payload = JSON.parse(data.dataJson)
+      payload = JSON.parse(parsed.dataJson)
     } catch {
       payload = {}
     }
+  } else if (parsed && typeof parsed === 'object' && parsed.data && typeof parsed.data === 'object') {
+    // Real shape: getDataHandler's { data: { device, stepGoal, history, workouts } }.
+    payload = parsed.data
   }
 
   return {
