@@ -1,12 +1,21 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   LayoutGrid,
   Footprints,
+  CreditCard,
   Lock,
   LogOut,
 } from "lucide-react";
 
-const LIVE_ITEMS = [{ icon: LayoutGrid, label: "Overview" }, { icon: Footprints, label: "Ring" }];
+// Items with a `to` are real, working navigation. Items without one are
+// still just visual/inert — matches this sidebar's existing pattern
+// (Overview/Ring were placeholders before "Plan" became the first real
+// second destination in the dashboard).
+const LIVE_ITEMS = [
+  { icon: LayoutGrid, label: "Overview", to: "/dashboard" },
+  { icon: Footprints, label: "Ring" },
+  { icon: CreditCard, label: "Plan", to: "/dashboard/plan" },
+];
 
 const DISABLED_ITEMS = [
   "Priorities",
@@ -17,6 +26,8 @@ const DISABLED_ITEMS = [
 ];
 
 export default function Sidebar({ onLogout }) {
+  const { pathname } = useLocation();
+
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-white/5 bg-brand-bg2 p-5 lg:flex">
       <Link to="/" className="mb-8 flex items-center gap-2 px-1">
@@ -27,15 +38,23 @@ export default function Sidebar({ onLogout }) {
       </Link>
 
       <nav className="flex flex-col gap-1">
-        {LIVE_ITEMS.map(({ icon: Icon, label }) => (
-          <button
-            key={label}
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white transition bg-white/5"
-          >
-            <Icon size={17} />
-            {label}
-          </button>
-        ))}
+        {LIVE_ITEMS.map(({ icon: Icon, label, to }) => {
+          const active = to && pathname === to;
+          const className = `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+            active ? "bg-white/10 text-white" : "text-white hover:bg-white/5"
+          }`;
+          return to ? (
+            <Link key={label} to={to} className={className}>
+              <Icon size={17} />
+              {label}
+            </Link>
+          ) : (
+            <button key={label} className={`${className} bg-white/5`}>
+              <Icon size={17} />
+              {label}
+            </button>
+          );
+        })}
 
         <div className="mb-1 mt-5 px-3 text-[10px] font-semibold uppercase tracking-wider text-white/25">
           Coming soon

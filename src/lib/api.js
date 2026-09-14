@@ -235,3 +235,33 @@ export async function getEntitlements() {
   if (!res.ok) throw new Error(data.error || 'Could not load your plan.')
   return data
 }
+
+/**
+ * Public plan/bundle/add-on catalog (see plansCore.js) — no login required.
+ * Returns { plans, bundles, addOns, agentFamily }, same shape as plans.js
+ * in yati-api. Powers the "Your Plan" comparison page.
+ */
+export async function getPlans() {
+  const res = await fetch(`${API_BASE}/api/plans`)
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(data.error || 'Could not load plans.')
+  return data
+}
+
+/**
+ * Sets which agents (from agentFamily) fill the account's included+extra
+ * slots. Owner-only — yati-api rejects it otherwise. Mirrors listOrders()'s
+ * pattern for an authenticated POST.
+ */
+export async function selectAgents(agentIds) {
+  const token = getToken()
+  if (!token) throw new Error('Not logged in.')
+  const res = await fetch(`${API_BASE}/api/entitlements/agents`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ agentIds }),
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(data.error || 'Could not update your agent selection.')
+  return data
+}

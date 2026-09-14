@@ -18,6 +18,7 @@ import Login from './pages/Login'
 import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
 import Dashboard from './pages/Dashboard'
+import PlanPage from './pages/PlanPage'
 import { AuthProvider, RequireAuth } from './lib/auth'
 import { CartProvider } from './lib/cart'
 import CartDrawer from './components/CartDrawer'
@@ -56,6 +57,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <Dashboard />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard/plan"
+            element={
+              <RequireAuth>
+                <PlanPage />
               </RequireAuth>
             }
           />
