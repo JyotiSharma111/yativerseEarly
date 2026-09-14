@@ -14,8 +14,8 @@ import WorkoutsCard from "../components/dashboard/WorkoutsCard";
 import ComingSoonCard from "../components/dashboard/ComingSoonCard";
 import AgentsLaunchCard from "../components/dashboard/AgentsLaunchCard";
 import { useAuth } from "../lib/auth";
-import { fetchRingData } from "../lib/api";
-import { SAMPLE_RING_DATA } from "../lib/sampleRingData";
+import { fetchRingData, getEntitlements } from "../lib/api";
+import { SAMPLE_RING_DATA, SAMPLE_ENTITLEMENTS } from "../lib/sampleRingData";
 
 const COMING_SOON = [
   {
@@ -50,6 +50,7 @@ export default function Dashboard() {
   const [isLive, setIsLive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [entitlements, setEntitlements] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,6 +83,34 @@ export default function Dashboard() {
     }
 
     load();
+    return () => {
+      cancelled = true;
+    };
+  }, [demo]);
+
+  // Separate effect, independent of ring data: a slow or failed
+  // entitlements check should never block the Steps/Workouts cards from
+  // showing. Fails closed on error — never claims agent access we
+  // couldn't actually confirm (see AgentsLaunchCard's `locked` prop).
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadEntitlements() {
+      if (demo) {
+        if (!cancelled) setEntitlements(SAMPLE_ENTITLEMENTS);
+        return;
+      }
+      try {
+        const data = await getEntitlements();
+        if (!cancelled) setEntitlements(data);
+      } catch {
+        if (!cancelled) {
+          setEntitlements({ planName: null, agents: { hasAnyAccess: false } });
+        }
+      }
+    }
+
+    loadEntitlements();
     return () => {
       cancelled = true;
     };
@@ -120,7 +149,14 @@ export default function Dashboard() {
             </div>
 
             <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-              <AgentsLaunchCard />
+              {entitlements ? (
+                <AgentsLaunchCard
+                  locked={!entitlements.agents?.hasAnyAccess}
+                  planName={entitlements.planName}
+                />
+              ) : (
+                <div className="h-48 animate-pulse rounded-2xl bg-white/[0.03]" />
+              )}
             </div>
 
             <div className="mb-3 mt-8 text-xs font-semibold uppercase tracking-wider text-white/25">

@@ -216,3 +216,22 @@ export async function fetchRingData() {
     workouts: Array.isArray(payload?.workouts) ? payload.workouts : [],
   }
 }
+
+/**
+ * Fetches the logged-in founder's plan/permissions — see entitlements.js
+ * and plans.js in yati-api. Returns the raw shape GET /api/entitlements
+ * sends: { planId, planName, agents: { includedSlots, extraSlots, selected,
+ * hasAnyAccess, family }, storage: {...}, aiCapacity: {...}, ... }.
+ * Dashboard.jsx uses agents.hasAnyAccess to decide whether to show the
+ * live AgentsLaunchCard or its locked/upgrade variant.
+ */
+export async function getEntitlements() {
+  const token = getToken()
+  if (!token) throw new Error('Not logged in.')
+  const res = await fetch(`${API_BASE}/api/entitlements`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(data.error || 'Could not load your plan.')
+  return data
+}

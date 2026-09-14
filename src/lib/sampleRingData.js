@@ -34,3 +34,22 @@ export const SAMPLE_RING_DATA = {
     { id: "w3", type: "Run", date: daysAgoISO(3), durationMin: 28, calories: 260 },
   ],
 };
+
+// Shaped like GET /api/entitlements's real response (see entitlements.js /
+// plans.js in yati-api) — used only in demo mode, same rule as
+// SAMPLE_RING_DATA above. hasAnyAccess: true so demo visitors see the real
+// AgentsLaunchCard rather than a locked state that has nothing to do with
+// whether the site itself works.
+export const SAMPLE_ENTITLEMENTS = {
+  planId: "founder",
+  planName: "YATI Founder (sample)",
+  status: "trial",
+  agents: {
+    family: ["ai_cmo", "ai_cro", "ai_cfo", "ai_coo"],
+    includedSlots: 2,
+    extraSlots: 0,
+    totalSlots: 2,
+    selected: ["ai_cmo", "ai_cro"],
+    hasAnyAccess: true,
+  },
+};
