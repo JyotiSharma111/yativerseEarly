@@ -25,17 +25,45 @@ const DISABLED_ITEMS = [
   "Privacy & Trust",
 ];
 
-export default function Sidebar({ onLogout }) {
+// Same status→color mapping as StatusBadge in PlanPage.jsx — kept in sync
+// deliberately so "trial" always reads gold, "active" always green, etc.
+// wherever a plan indicator shows up in the dashboard.
+const PLAN_PILL_STYLES = {
+  trial: "border-brand-gold/25 bg-brand-gold/10 text-brand-gold2",
+  active: "border-emerald-400/25 bg-emerald-400/10 text-emerald-300",
+  canceled: "border-white/10 bg-white/5 text-white/40",
+};
+
+export default function Sidebar({ onLogout, planLabel, planStatus }) {
   const { pathname } = useLocation();
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-white/5 bg-brand-bg2 p-5 lg:flex">
-      <Link to="/" className="mb-8 flex items-center gap-2 px-1">
+      <Link to="/" className="mb-5 flex items-center gap-2 px-1">
         <img src="/logo.png" alt="yAtIverse" className="h-7 w-7 rounded-lg" />
         <span className="font-display text-sm font-bold text-white">
           Founder Command Center
         </span>
       </Link>
+
+      {/* Always-visible "which plan am I on" answer — added because the
+          plan was only discoverable by opening /dashboard/plan, which
+          founders found unclear. planLabel is undefined while entitlements
+          are still loading, so this renders nothing rather than a
+          misleading placeholder. */}
+      {planLabel && (
+        <Link
+          to="/dashboard/plan"
+          className={`mb-5 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition hover:brightness-110 ${
+            PLAN_PILL_STYLES[planStatus] || PLAN_PILL_STYLES.canceled
+          }`}
+        >
+          <span className="truncate">{planLabel}</span>
+          <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide opacity-70">
+            Plan
+          </span>
+        </Link>
+      )}
 
       <nav className="flex flex-col gap-1">
         {LIVE_ITEMS.map(({ icon: Icon, label, to }) => {

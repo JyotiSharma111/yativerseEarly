@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  CheckCircle2,
   Clock,
   Mail,
   Info,
@@ -9,7 +8,6 @@ import {
   Cpu,
   Sparkles,
   Lock,
-  ArrowUpRight,
 } from "lucide-react";
 import SEO from "../components/SEO";
 import Sidebar from "../components/dashboard/Sidebar";
@@ -56,6 +54,29 @@ function daysLeft(isoDate) {
   if (!isoDate) return null;
   const ms = new Date(isoDate).getTime() - Date.now();
   return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+}
+
+// The `trial` tier isn't a real catalog entry (see plans.js) — it mirrors
+// Founder's limits as a placeholder. Rather than hardcode "founder" here
+// (fragile if that assumption changes), find whichever catalog plan has
+// the exact same storage/AI-capacity/agent-slot limits the account is
+// actually trialing, so the "matches your trial" ribbon below stays
+// correct even if the mirrored plan changes.
+function findTrialMirror(catalog, entitlements) {
+  if (!catalog?.plans || entitlements?.status !== "trial") return null;
+  return (
+    catalog.plans.find(
+      (p) =>
+        p.storageBytes === entitlements.storage?.limitBytes &&
+        p.aiCapacityTokens === entitlements.aiCapacity?.limitTokens &&
+        p.includedAgentSlots === entitlements.agents?.includedSlots
+    ) || null
+  );
+}
+
+function findCatalogEntry(catalog, planId) {
+  if (!catalog || !planId) return null;
+  return catalog.plans?.find((p) => p.id === planId) || catalog.bundles?.find((b) => b.id === planId) || null;
 }
 
 function mailtoUpgrade(accountEmail, targetPlanName) {
@@ -107,24 +128,30 @@ function UsageBar({ icon: Icon, label, usedText, limitText, pct }) {
   );
 }
 
-function PlanCard({ plan, isCurrent, accountEmail }) {
+function PlanCard({ plan, isCurrent, isTrialMirror, accountEmail }) {
   const isBundle = plan.upfrontUsd !== undefined;
+  const highlighted = isCurrent || isTrialMirror;
   return (
     <div
-      className={`flex flex-col rounded-2xl border p-5 ${
+      className={`relative flex flex-col overflow-hidden rounded-2xl border p-5 ${
         isCurrent
-          ? "border-brand-gold/40 bg-brand-gold/[0.06]"
+          ? "border-brand-gold ring-2 ring-brand-gold/50 bg-brand-gold/[0.08]"
+          : isTrialMirror
+          ? "border-brand-gold/40 bg-brand-gold/[0.05]"
           : "border-white/5 bg-white/[0.02]"
       }`}
     >
+      {highlighted && (
+        <div
+          className={`-mx-5 -mt-5 mb-4 px-5 py-1.5 text-center text-[11px] font-bold uppercase tracking-wide ${
+            isCurrent ? "bg-brand-gold text-brand-bg" : "bg-brand-gold/20 text-brand-gold2"
+          }`}
+        >
+          {isCurrent ? "✓ Your current plan" : "Matches your trial limits"}
+        </div>
+      )}
       <div className="mb-1 flex items-center justify-between">
         <h4 className="font-display text-sm font-bold text-white">{plan.name}</h4>
-        {isCurrent && (
-          <span className="flex items-center gap-1 rounded-full bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-gold2">
-            <CheckCircle2 size={11} />
-            Current
-          </span>
-        )}
       </div>
       <div className="mb-4 text-2xl font-bold text-white">
         ${plan.priceMonthlyUsd}
@@ -164,7 +191,7 @@ function PlanCard({ plan, isCurrent, accountEmail }) {
           className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-lg border border-brand-gold/30 px-3 py-2 text-xs font-semibold text-brand-gold2 transition-colors hover:bg-brand-gold/10"
         >
           <Mail size={13} />
-          Email us to switch
+          {isTrialMirror ? "Email us to subscribe" : "Email us to switch"}
         </a>
       )}
     </div>
@@ -266,11 +293,13 @@ export default function PlanPage() {
   const trialDays = entitlements?.status === "trial" ? daysLeft(entitlements.trialEndsAt) : null;
   const totalSlots = entitlements?.agents?.totalSlots || 0;
   const canManageAgents = !demo && entitlements?.isOwner && totalSlots > 0;
+  const trialMirror = findTrialMirror(catalog, entitlements);
+  const currentCatalogEntry = entitlements ? findCatalogEntry(catalog, entitlements.planId) : null;
 
   return (
     <div className="flex min-h-screen bg-brand-bg font-body text-white">
       <SEO title="Your Plan — yAtIverse" description="Your subscription, usage, and AI agents." />
-      <Sidebar onLogout={logout} />
+      <Sidebar onLogout={logout} planLabel={entitlements?.planName} planStatus={entitlements?.status} />
 
       <main className="flex-1 px-5 py-8 sm:px-8 lg:px-10">
         <div className="mb-6 flex items-center justify-between">
@@ -299,22 +328,45 @@ export default function PlanPage() {
           </div>
         ) : entitlements ? (
           <>
-            {/* Current plan + usage */}
-            <section className="rounded-2xl border border-white/5 bg-white/[0.02] p-6">
-              <div className="mb-5 flex flex-wrap items-center gap-3">
-                <h2 className="font-display text-lg font-bold text-white">
+            {/* Current plan + usage — redesigned Sept 18 to actually answer
+                "which plan am I on" at a glance: a large, high-contrast
+                hero instead of a small inline heading, plus (for trial
+                accounts) an explicit note about which real plan the trial
+                mirrors, since nothing in the comparison grid below used to
+                highlight anything for a trial account. */}
+            <section className="relative overflow-hidden rounded-2xl border border-brand-gold/25 bg-gradient-to-br from-brand-gold/[0.09] via-white/[0.02] to-white/[0.02] p-6 sm:p-7">
+              <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-brand-gold2/80">
+                Your current plan
+              </div>
+              <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+                <h2 className="font-display text-3xl font-extrabold leading-none text-white sm:text-4xl">
                   {entitlements.planName || "No plan"}
                 </h2>
+                {currentCatalogEntry && (
+                  <span className="pb-0.5 text-lg font-semibold text-white/50">
+                    ${currentCatalogEntry.priceMonthlyUsd}/mo
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-3">
                 <StatusBadge status={entitlements.status} />
                 {trialDays !== null && (
-                  <span className="flex items-center gap-1.5 text-xs font-medium text-white/40">
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-white/50">
                     <Clock size={13} />
                     {trialDays === 0 ? "Trial ends today" : `${trialDays} day${trialDays === 1 ? "" : "s"} left in trial`}
                   </span>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              {entitlements.status === "trial" && trialMirror && (
+                <p className="mt-3 text-sm text-white/50">
+                  Free trial, using the same limits as{" "}
+                  <strong className="font-semibold text-white/80">{trialMirror.name}</strong> — marked below.
+                </p>
+              )}
+
+              <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <UsageBar
                   icon={HardDrive}
                   label="Storage"
@@ -447,6 +499,7 @@ export default function PlanPage() {
                   key={plan.id}
                   plan={plan}
                   isCurrent={entitlements?.planId === plan.id}
+                  isTrialMirror={trialMirror?.id === plan.id}
                   accountEmail={email}
                 />
               ))}

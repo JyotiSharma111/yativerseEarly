@@ -119,7 +119,7 @@ export default function Dashboard() {
   return (
     <div className="flex min-h-screen bg-brand-bg font-body text-white">
       <SEO title="Dashboard — yAtIverse" description="Your Founder Command Center." />
-      <Sidebar onLogout={logout} />
+      <Sidebar onLogout={logout} planLabel={entitlements?.planName} planStatus={entitlements?.status} />
 
       <main className="flex-1 px-5 py-8 sm:px-8 lg:px-10">
         <TopBar email={email} live={isLive} />
