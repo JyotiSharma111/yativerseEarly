@@ -265,3 +265,26 @@ export async function selectAgents(agentIds) {
   if (!res.ok) throw new Error(data.error || 'Could not update your agent selection.')
   return data
 }
+
+/**
+ * Starts a real Stripe Checkout session to move the account onto a paid
+ * plan (one of the four core plans — signal/founder/startup/scale; see
+ * subscriptionCheckoutCore.js in yati-api). Owner-only, same rule as
+ * selectAgents(). Returns { url } — the caller redirects the browser
+ * there (window.location.href = url); this is a real Stripe-hosted
+ * checkout page, not something built in this app. The plan doesn't
+ * actually change until Stripe confirms payment via webhook, so nothing
+ * here updates local state optimistically.
+ */
+export async function createSubscriptionCheckout(planId) {
+  const token = getToken()
+  if (!token) throw new Error('Not logged in.')
+  const res = await fetch(`${API_BASE}/api/checkout/subscription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ planId }),
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(data.error || 'Could not start checkout.')
+  return data
+}

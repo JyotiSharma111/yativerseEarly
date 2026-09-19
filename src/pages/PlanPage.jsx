@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
+  CheckCircle2,
   Clock,
   Mail,
   Info,
@@ -8,21 +10,21 @@ import {
   Cpu,
   Sparkles,
   Lock,
+  X,
 } from "lucide-react";
 import SEO from "../components/SEO";
 import Sidebar from "../components/dashboard/Sidebar";
 import { useAuth } from "../lib/auth";
-import { getEntitlements, getPlans, selectAgents } from "../lib/api";
+import { getEntitlements, getPlans, selectAgents, createSubscriptionCheckout } from "../lib/api";
 import { SAMPLE_ENTITLEMENTS } from "../lib/sampleRingData";
 
 const GB = 1024 * 1024 * 1024;
 
 // Real address, confirmed in use elsewhere in this codebase (Order.jsx's
 // return-policy copy, Checkout.jsx's payment-failure fallback) — not
-// invented for this page. There's no checkout/Stripe plan-switch yet (see
-// claude/subscription-entitlement-model.md), so "upgrade" here means a
-// pre-filled email to a human, not a fake button that pretends to charge
-// a card.
+// invented for this page. Still used as the CTA for bundles (physical
+// hardware, real fulfillment) — the four core plans go through real
+// Stripe checkout now (see claude/subscription-entitlement-model.md).
 const SUPPORT_EMAIL = "support@yativerse.ai";
 
 // Matches the family in plans.js / Agents.jsx's marketing copy.
@@ -128,7 +130,7 @@ function UsageBar({ icon: Icon, label, usedText, limitText, pct }) {
   );
 }
 
-function PlanCard({ plan, isCurrent, isTrialMirror, accountEmail }) {
+function PlanCard({ plan, isCurrent, isTrialMirror, accountEmail, onUpgrade, upgrading, upgradeError }) {
   const isBundle = plan.upfrontUsd !== undefined;
   const highlighted = isCurrent || isTrialMirror;
   return (
@@ -185,14 +187,29 @@ function PlanCard({ plan, isCurrent, isTrialMirror, accountEmail }) {
         <div className="mt-auto rounded-lg bg-white/5 px-3 py-2 text-center text-xs font-medium text-white/40">
           This is your plan
         </div>
-      ) : (
+      ) : isBundle || !onUpgrade ? (
+        // Bundles ship physical hardware — real fulfillment, not something
+        // a Checkout Session alone handles — so they stay on the honest
+        // mailto CTA (see claude/subscription-entitlement-model.md).
         <a
           href={mailtoUpgrade(accountEmail, plan.name)}
           className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-lg border border-brand-gold/30 px-3 py-2 text-xs font-semibold text-brand-gold2 transition-colors hover:bg-brand-gold/10"
         >
           <Mail size={13} />
-          {isTrialMirror ? "Email us to subscribe" : "Email us to switch"}
+          {isBundle ? "Email us about bundles" : "Email us to switch"}
         </a>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={() => onUpgrade(plan.id)}
+            disabled={upgrading}
+            className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-gold px-3 py-2 text-xs font-semibold text-brand-bg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {upgrading ? "Redirecting to checkout…" : isTrialMirror ? "Subscribe" : `Upgrade to ${plan.name}`}
+          </button>
+          {upgradeError && <p className="mt-2 text-[11px] text-red-400">{upgradeError}</p>}
+        </>
       )}
     </div>
   );
@@ -208,6 +225,10 @@ export default function PlanPage() {
   const [selected, setSelected] = useState([]);
   const [savingAgents, setSavingAgents] = useState(false);
   const [agentError, setAgentError] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [checkoutPlanId, setCheckoutPlanId] = useState(null); // which plan's button is mid-redirect
+  const [checkoutError, setCheckoutError] = useState(null); // { planId, message }
+  const checkoutResult = searchParams.get("checkout"); // 'success' | 'cancel' | null, set by Stripe's redirect
 
   useEffect(() => {
     let cancelled = false;
@@ -263,6 +284,49 @@ export default function PlanPage() {
     };
   }, []);
 
+  // Stripe redirects back here with ?checkout=success once payment
+  // completes, but the workspace's planId/status only actually change once
+  // stripeWebhookCore.js processes the checkout.session.completed event —
+  // that can lag the redirect by a second or two. One short delayed
+  // re-fetch covers the common case without polling indefinitely.
+  useEffect(() => {
+    if (checkoutResult !== "success" || demo) return;
+    const t = setTimeout(async () => {
+      try {
+        const data = await getEntitlements();
+        setEntitlements(data);
+        setSelected(data.agents?.selected || []);
+      } catch {
+        // leave whatever's already on screen — the banner already tells
+        // them it can take a minute, and a manual refresh always works.
+      }
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [checkoutResult, demo]);
+
+  function dismissCheckoutBanner() {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("checkout");
+        return next;
+      },
+      { replace: true }
+    );
+  }
+
+  async function startCheckout(planId) {
+    setCheckoutError(null);
+    setCheckoutPlanId(planId);
+    try {
+      const { url } = await createSubscriptionCheckout(planId);
+      window.location.href = url;
+    } catch (err) {
+      setCheckoutError({ planId, message: err.message });
+      setCheckoutPlanId(null);
+    }
+  }
+
   async function toggleAgent(agentId) {
     if (demo || !entitlements?.isOwner || savingAgents) return;
     const totalSlots = entitlements.agents?.totalSlots || 0;
@@ -308,6 +372,27 @@ export default function PlanPage() {
             <p className="mt-0.5 text-sm text-white/40">{email}</p>
           </div>
         </div>
+
+        {checkoutResult === "success" && (
+          <div className="mb-6 flex items-start justify-between gap-3 rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-300">
+            <span className="flex items-start gap-2">
+              <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
+              Payment received — your plan updates here within a minute or two once Stripe confirms it. Refresh
+              if it doesn't show up right away.
+            </span>
+            <button onClick={dismissCheckoutBanner} className="shrink-0 text-emerald-300/60 hover:text-emerald-300">
+              <X size={15} />
+            </button>
+          </div>
+        )}
+        {checkoutResult === "cancel" && (
+          <div className="mb-6 flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/50">
+            <span>Checkout canceled — nothing was charged, no changes made.</span>
+            <button onClick={dismissCheckoutBanner} className="shrink-0 text-white/30 hover:text-white/50">
+              <X size={15} />
+            </button>
+          </div>
+        )}
 
         {(demo || error) && (
           <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-brand-gold/20 bg-brand-gold/5 px-4 py-3 text-sm text-brand-gold2">
@@ -501,6 +586,9 @@ export default function PlanPage() {
                   isCurrent={entitlements?.planId === plan.id}
                   isTrialMirror={trialMirror?.id === plan.id}
                   accountEmail={email}
+                  onUpgrade={startCheckout}
+                  upgrading={checkoutPlanId === plan.id}
+                  upgradeError={checkoutError?.planId === plan.id ? checkoutError.message : null}
                 />
               ))}
             </div>
@@ -527,8 +615,9 @@ export default function PlanPage() {
 
         <p className="mt-8 flex items-start gap-2 text-xs text-white/25">
           <Info size={13} className="mt-0.5 shrink-0" />
-          There's no self-serve checkout yet — switching plans is handled by our team for now. "Email us to
-          switch" opens a pre-filled email to {SUPPORT_EMAIL}, not a charge.
+          "Upgrade" on Signal/Founder/Startup/Scale opens a real, secure Stripe checkout. Bundles ship physical
+          hardware, so those go through our team for now — "Email us about bundles" opens a pre-filled email to{" "}
+          {SUPPORT_EMAIL}, not a charge.
         </p>
       </main>
     </div>
