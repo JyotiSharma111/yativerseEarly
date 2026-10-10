@@ -153,23 +153,61 @@ export async function approveProspecting(runId, approvedContactIds) {
 }
 
 // ---------------------------------------------------------------------------
-// Settings
+// Settings — ICP
 // ---------------------------------------------------------------------------
 
-export async function getSettings() {
+export async function getIcpSettings() {
   return apiFetch('/api/v1/settings/icp')
 }
 
-export async function updateSettings(payload) {
+export async function updateIcpSettings(payload) {
   return apiFetch('/api/v1/settings/icp', {
     method: 'PATCH',
     body: JSON.stringify(payload),
   })
 }
 
-export async function updateSmtp(payload) {
+// ---------------------------------------------------------------------------
+// Settings — Product / Seller context
+// ---------------------------------------------------------------------------
+
+export async function getProductSettings() {
+  return apiFetch('/api/v1/settings/product')
+}
+
+export async function updateProductSettings(payload) {
+  return apiFetch('/api/v1/settings/product', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+/** Scrape a URL and return AI-suggested description + ICP fields. */
+export async function scrapeProductUrl(url) {
+  return apiFetch('/api/v1/settings/product/scrape', {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Settings — SMTP
+// ---------------------------------------------------------------------------
+
+export async function getSmtpSettings() {
+  return apiFetch('/api/v1/settings/smtp')
+}
+
+export async function updateSmtpSettings(payload) {
   return apiFetch('/api/v1/settings/smtp', {
     method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function testSmtp(payload) {
+  return apiFetch('/api/v1/settings/smtp/test', {
+    method: 'POST',
     body: JSON.stringify(payload),
   })
 }

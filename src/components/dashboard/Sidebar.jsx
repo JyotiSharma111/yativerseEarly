@@ -7,6 +7,7 @@ import {
   Users,
   Mail,
   TrendingUp,
+  Settings,
   Lock,
   LogOut,
 } from "lucide-react";
@@ -23,6 +24,7 @@ const LIVE_ITEMS = [
   { icon: Users,       label: "Contacts",  to: "/dashboard/contacts" },
   { icon: Mail,        label: "Drafts",    to: "/dashboard/drafts" },
   { icon: TrendingUp,  label: "Deals",     to: "/dashboard/deals" },
+  { icon: Settings,    label: "Settings",  to: "/dashboard/settings" },
 ];
 
 const DISABLED_ITEMS = [

@@ -23,6 +23,7 @@ import AgentsPage from './pages/dashboard/AgentsPage'
 import ContactsPage from './pages/dashboard/ContactsPage'
 import DraftsPage from './pages/dashboard/DraftsPage'
 import DealsPage from './pages/dashboard/DealsPage'
+import SettingsPage from './pages/dashboard/SettingsPage'
 import { AuthProvider, RequireAuth } from './lib/auth'
 import { CartProvider } from './lib/cart'
 import CartDrawer from './components/CartDrawer'
@@ -101,6 +102,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <DealsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard/settings"
+            element={
+              <RequireAuth>
+                <SettingsPage />
               </RequireAuth>
             }
           />
