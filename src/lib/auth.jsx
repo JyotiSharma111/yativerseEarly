@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { isAuthenticated, getStoredEmail, clearSession } from "./api";
+import { clearFoundersToken } from "./foundersApi";
 
 const DEMO_KEY = "yati_demo_mode";
 
@@ -29,6 +30,7 @@ export function AuthProvider({ children }) {
     refresh,
     logout: () => {
       clearSession();
+      clearFoundersToken();
       exitDemoMode();
       refresh();
     },

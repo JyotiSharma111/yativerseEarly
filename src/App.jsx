@@ -19,6 +19,10 @@ import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
 import Dashboard from './pages/Dashboard'
 import PlanPage from './pages/PlanPage'
+import AgentsPage from './pages/dashboard/AgentsPage'
+import ContactsPage from './pages/dashboard/ContactsPage'
+import DraftsPage from './pages/dashboard/DraftsPage'
+import DealsPage from './pages/dashboard/DealsPage'
 import { AuthProvider, RequireAuth } from './lib/auth'
 import { CartProvider } from './lib/cart'
 import CartDrawer from './components/CartDrawer'
@@ -65,6 +69,38 @@ export default function App() {
             element={
               <RequireAuth>
                 <PlanPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard/agents"
+            element={
+              <RequireAuth>
+                <AgentsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard/contacts"
+            element={
+              <RequireAuth>
+                <ContactsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard/drafts"
+            element={
+              <RequireAuth>
+                <DraftsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard/deals"
+            element={
+              <RequireAuth>
+                <DealsPage />
               </RequireAuth>
             }
           />

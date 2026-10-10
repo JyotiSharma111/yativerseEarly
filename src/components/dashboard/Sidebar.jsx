@@ -3,6 +3,10 @@ import {
   LayoutGrid,
   Footprints,
   CreditCard,
+  Bot,
+  Users,
+  Mail,
+  TrendingUp,
   Lock,
   LogOut,
 } from "lucide-react";
@@ -12,14 +16,17 @@ import {
 // (Overview/Ring were placeholders before "Plan" became the first real
 // second destination in the dashboard).
 const LIVE_ITEMS = [
-  { icon: LayoutGrid, label: "Overview", to: "/dashboard" },
-  { icon: Footprints, label: "Ring" },
-  { icon: CreditCard, label: "Plan", to: "/dashboard/plan" },
+  { icon: LayoutGrid,  label: "Overview",  to: "/dashboard" },
+  { icon: Footprints,  label: "Ring" },
+  { icon: CreditCard,  label: "Plan",      to: "/dashboard/plan" },
+  { icon: Bot,         label: "AI Agents", to: "/dashboard/agents" },
+  { icon: Users,       label: "Contacts",  to: "/dashboard/contacts" },
+  { icon: Mail,        label: "Drafts",    to: "/dashboard/drafts" },
+  { icon: TrendingUp,  label: "Deals",     to: "/dashboard/deals" },
 ];
 
 const DISABLED_ITEMS = [
   "Priorities",
-  "AI Agents",
   "Venture Pulse",
   "Systems & Devices",
   "Privacy & Trust",
