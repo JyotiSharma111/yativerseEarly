@@ -7,7 +7,15 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import SEO from '../components/SEO'
 import { fadeUp, fadeLeft, fadeRight } from '../lib/motion'
-import { createOrder, createPaymentIntent, register, getStoredEmail, getToken } from '../lib/api'
+import {
+  createOrder,
+  createPaymentIntent,
+  register,
+  getStoredEmail,
+  getToken,
+  requestEmailVerification,
+  confirmEmailVerification,
+} from '../lib/api'
 import { getStripe } from '../lib/stripe'
 import { useCart } from '../lib/cart'
 
@@ -151,7 +159,18 @@ export default function Checkout() {
   const [password, setPassword] = useState('')
   const [accountBusy, setAccountBusy] = useState(false)
   const [accountError, setAccountError] = useState('')
-  const [accountDone, setAccountDone] = useState(Boolean(getToken()))
+  // True only when the account was created on THIS screen. A leftover login
+  // from an earlier visit must not count: it used to hide the "create a
+  // password" form and show a different person's email (e.g. testing a new
+  // order after using another account in the same browser).
+  const [accountDone, setAccountDone] = useState(false)
+  const [verifyState, setVerifyState] = useState('idle') // 'idle' | 'sent' | 'verified'
+  const [verifyCode, setVerifyCode] = useState('')
+  const [verifyBusy, setVerifyBusy] = useState(false)
+  const [verifyError, setVerifyError] = useState('')
+  const orderEmail = form.email.trim().toLowerCase()
+  const signedInAsOrderEmail = Boolean(getToken()) && (getStoredEmail() || '').trim().toLowerCase() === orderEmail
+  const showSignedIn = accountDone || signedInAsOrderEmail
 
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -215,12 +234,44 @@ export default function Checkout() {
     setAccountError('')
     setAccountBusy(true)
     try {
-      await register(form.email, password)
+      await register(orderEmail, password)
       setAccountDone(true)
+      // Order history is only readable once the email is proven, so ask for
+      // the code right away. A failure here shouldn't undo the account.
+      try {
+        await requestEmailVerification()
+        setVerifyState('sent')
+      } catch (err) {
+        setVerifyError(err.message)
+      }
     } catch (err) {
       setAccountError(err.message)
     } finally {
       setAccountBusy(false)
+    }
+  }
+
+  const confirmCode = async (e) => {
+    e.preventDefault()
+    setVerifyError('')
+    setVerifyBusy(true)
+    try {
+      await confirmEmailVerification(verifyCode.trim())
+      setVerifyState('verified')
+    } catch (err) {
+      setVerifyError(err.message)
+    } finally {
+      setVerifyBusy(false)
+    }
+  }
+
+  const resendCode = async () => {
+    setVerifyError('')
+    try {
+      await requestEmailVerification()
+      setVerifyState('sent')
+    } catch (err) {
+      setVerifyError(err.message)
     }
   }
 
@@ -284,9 +335,27 @@ export default function Checkout() {
                   Total charged: <span className="text-white font-semibold">${centsToStr(grandTotalCents)}</span>
                 </p>
 
-                {accountDone ? (
+                {showSignedIn ? (
                   <div className="rounded-2xl px-4 py-3 text-sm font-body" style={{ background: `${BLUE}12`, border: `1px solid ${BLUE}30`, color: '#fff' }}>
                     You're signed in as {getStoredEmail() || form.email}. Use the same email and password to log into the yAtI app once your ring arrives.
+                    {verifyState === 'sent' && (
+                      <form onSubmit={confirmCode} className="mt-3 space-y-2 text-left">
+                        <p className="text-xs text-white/60">
+                          We emailed a 6-digit code to {orderEmail}. Enter it to verify your email and unlock your order history.
+                        </p>
+                        <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="6-digit code"
+                          value={verifyCode} onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
+                          className="w-full bg-white/[0.05] border border-white/10 rounded-full px-4 py-2.5 text-xs text-white placeholder-white/30 outline-none focus:border-brand-purple/50 font-body" />
+                        <button type="submit" disabled={verifyBusy || verifyCode.length !== 6}
+                          className="w-full py-2.5 rounded-full font-display font-semibold text-xs text-black transition-all disabled:opacity-40"
+                          style={{ background: `linear-gradient(135deg,${GOLD},${GOLD2})` }}>
+                          {verifyBusy ? 'Checking…' : 'Verify email'}
+                        </button>
+                        <button type="button" onClick={resendCode} className="text-[11px] text-white/45 underline">Send a new code</button>
+                      </form>
+                    )}
+                    {verifyState === 'verified' && <p className="mt-2 text-xs" style={{ color: '#7CF0B0' }}>Email verified ✓</p>}
+                    {verifyError && <p className="mt-2 text-xs" style={{ color: '#FF6B8A' }}>{verifyError}</p>}
                   </div>
                 ) : (
                   <form onSubmit={createAccount} className="text-left space-y-3">
@@ -296,7 +365,19 @@ export default function Checkout() {
                     <input type="password" placeholder="Create a password (min. 8 characters)" value={password}
                       onChange={(e) => setPassword(e.target.value)} minLength={8}
                       className="w-full bg-white/[0.05] border border-white/10 rounded-full px-4 py-2.5 text-xs text-white placeholder-white/30 outline-none focus:border-brand-purple/50 font-body" />
-                    {accountError && <p className="text-xs font-body" style={{ color: '#FF6B8A' }}>{accountError}</p>}
+                    {getToken() && !signedInAsOrderEmail && (
+                      <p className="text-[11px] font-body text-white/45">
+                        You're currently signed in as {getStoredEmail()}. Creating this account will switch you to {orderEmail || 'the email on this order'}.
+                      </p>
+                    )}
+                    {accountError && (
+                      <p className="text-xs font-body" style={{ color: '#FF6B8A' }}>
+                        {accountError}
+                        {/already exists/i.test(accountError) && (
+                          <> <Link to="/login" className="underline">Log in instead</Link></>
+                        )}
+                      </p>
+                    )}
                     <button type="submit" disabled={accountBusy || password.length < 8}
                       className="w-full py-2.5 rounded-full font-display font-semibold text-xs text-black transition-all disabled:opacity-40"
                       style={{ background: `linear-gradient(135deg,${GOLD},${GOLD2})` }}>
