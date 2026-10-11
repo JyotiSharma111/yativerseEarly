@@ -111,17 +111,39 @@ function PaymentForm({ totalCents, onSuccess }) {
   )
 }
 
+// Orders are already saved by the time the payment step shows, but the cart is
+// cleared. Remember them for this tab only so a refresh (or a flaky network)
+// returns to the payment step instead of an empty cart. Only ids, totals and
+// the email are kept — no address or phone.
+const PENDING_KEY = 'yati_pending_payment'
+function loadPending() {
+  try {
+    const raw = sessionStorage.getItem(PENDING_KEY)
+    const v = raw && JSON.parse(raw)
+    return v && Array.isArray(v.orders) && v.orders.length && v.email ? v : null
+  } catch (_) {
+    return null
+  }
+}
+function savePending(orders, email) {
+  try { sessionStorage.setItem(PENDING_KEY, JSON.stringify({ orders, email })) } catch (_) { /* storage unavailable */ }
+}
+function clearPending() {
+  try { sessionStorage.removeItem(PENDING_KEY) } catch (_) { /* ignore */ }
+}
+
 export default function Checkout() {
   const { items, subtotalCents, removeItems, clear } = useCart()
 
-  const [phase, setPhase] = useState('shipping') // 'shipping' | 'payment' | 'done'
+  const [pending] = useState(loadPending)
+  const [phase, setPhase] = useState(pending ? 'payment' : 'shipping') // 'shipping' | 'payment' | 'done'
   const [form, setForm] = useState({
-    name: '', email: '', phone: '',
+    name: '', email: pending ? pending.email : '', phone: '',
     addressLine1: '', addressLine2: '', city: '', state: '', zip: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [placedOrders, setPlacedOrders] = useState(null) // [{ item, orderId, totalCents }]
+  const [placedOrders, setPlacedOrders] = useState(pending ? pending.orders : null) // [{ item, orderId, totalCents }]
   const [clientSecret, setClientSecret] = useState(null)
 
   // Resolved once, client-side: 'loading' | 'ready' | 'unavailable'.
@@ -186,9 +208,25 @@ export default function Checkout() {
       // Orders already exist at this point (they succeeded below) — no
       // need to touch the cart again. Just let the payment phase show the
       // error with a retry button that re-attempts this same call.
+      if (err.code === 'ORDER_EXPIRED') {
+        // The reservation window passed; these orders can't be paid any more.
+        clearPending()
+        setPlacedOrders(null)
+        setClientSecret(null)
+        setPhase('shipping')
+        setError('Your reservation expired before payment. Please add your ring to the cart again and re-order.')
+        return
+      }
       setError(err.message)
     }
   }
+
+  // Returning to the payment step after a refresh: orders were restored from
+  // sessionStorage above, so just ask for a fresh PaymentIntent.
+  useEffect(() => {
+    if (pending) startPaymentIntent(pending.orders, pending.email)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const submitShipping = async (e) => {
     e.preventDefault()
@@ -221,6 +259,7 @@ export default function Checkout() {
       clear()
       setPlacedOrders(placed)
       setPhase('payment')
+      savePending(placed, form.email)
       await startPaymentIntent(placed, form.email)
     } catch (err) {
       setError(err.message)
@@ -417,7 +456,7 @@ export default function Checkout() {
                       </p>
                     ) : clientSecret && stripeState === 'ready' ? (
                       <Elements stripe={stripeInstance} options={{ clientSecret, appearance: STRIPE_APPEARANCE }}>
-                        <PaymentForm totalCents={grandTotalCents} onSuccess={() => setPhase('done')} />
+                        <PaymentForm totalCents={grandTotalCents} onSuccess={() => { clearPending(); setPhase('done') }} />
                       </Elements>
                     ) : (
                       <p className="font-body text-sm text-white/40 text-center py-6">Preparing secure payment…</p>

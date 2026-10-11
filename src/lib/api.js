@@ -186,7 +186,11 @@ export async function createPaymentIntent({ email, orderIds }) {
     body: JSON.stringify({ email, orderIds }),
   })
   const data = await parseJson(res)
-  if (!res.ok) throw new Error(data.error || 'Could not start payment.')
+  if (!res.ok) {
+    const err = new Error(data.error || 'Could not start payment.')
+    err.code = data.code // e.g. 'ORDER_EXPIRED' (410) when the reservation window passed
+    throw err
+  }
   return data
 }
 
