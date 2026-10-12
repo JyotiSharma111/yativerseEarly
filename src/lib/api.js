@@ -23,9 +23,29 @@ export function setSession(token, email) {
   localStorage.setItem(EMAIL_KEY, email)
 }
 
+/**
+ * The token to send with an API call. Firebase tokens expire after about an
+ * hour, so for Firebase users this asks the SDK for a current one every time
+ * (the SDK refreshes it when needed). Falls back to the stored token for
+ * people still on the old password login.
+ */
+export async function getFreshToken() {
+  if (localStorage.getItem('yati_auth_provider') === 'firebase') {
+    try {
+      const { getFirebaseIdToken } = await import('./firebaseSession')
+      const fresh = await getFirebaseIdToken()
+      if (fresh) return fresh
+    } catch {
+      // Firebase couldn't load; fall back to whatever token is stored.
+    }
+  }
+  return getToken()
+}
+
 export function clearSession() {
   localStorage.removeItem(TOKEN_KEY)
   localStorage.removeItem(EMAIL_KEY)
+  localStorage.removeItem('yati_auth_provider')
 }
 
 async function parseJson(res) {
@@ -67,7 +87,7 @@ export async function register(email, password) {
  * succeeds — see yati-api emailVerificationCore.js for why.
  */
 export async function requestEmailVerification() {
-  const token = getToken()
+  const token = await getFreshToken()
   if (!token) throw new Error('Not logged in.')
   const res = await fetch(`${API_BASE}/api/verify-email/request`, {
     method: 'POST',
@@ -80,7 +100,7 @@ export async function requestEmailVerification() {
 
 /** Confirms the emailed 6-digit code. */
 export async function confirmEmailVerification(code) {
-  const token = getToken()
+  const token = await getFreshToken()
   if (!token) throw new Error('Not logged in.')
   const res = await fetch(`${API_BASE}/api/verify-email/confirm`, {
     method: 'POST',
@@ -150,7 +170,7 @@ export async function login(email, password) {
 
 /** Lists orders for the logged-in account. */
 export async function listOrders() {
-  const token = getToken()
+  const token = await getFreshToken()
   if (!token) throw new Error('Not logged in.')
   const res = await fetch(`${API_BASE}/api/orders`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -240,7 +260,7 @@ function normalizeHistory(history) {
  * matching empty-state UI when there's genuinely no data yet.
  */
 export async function fetchRingData() {
-  const token = getToken()
+  const token = await getFreshToken()
   if (!token) throw new Error('Not logged in.')
   const res = await fetch(`${API_BASE}/api/data`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -278,7 +298,7 @@ export async function fetchRingData() {
  * live AgentsLaunchCard or its locked/upgrade variant.
  */
 export async function getEntitlements() {
-  const token = getToken()
+  const token = await getFreshToken()
   if (!token) throw new Error('Not logged in.')
   const res = await fetch(`${API_BASE}/api/entitlements`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -306,7 +326,7 @@ export async function getPlans() {
  * pattern for an authenticated POST.
  */
 export async function selectAgents(agentIds) {
-  const token = getToken()
+  const token = await getFreshToken()
   if (!token) throw new Error('Not logged in.')
   const res = await fetch(`${API_BASE}/api/entitlements/agents`, {
     method: 'POST',
@@ -329,7 +349,7 @@ export async function selectAgents(agentIds) {
  * here updates local state optimistically.
  */
 export async function createSubscriptionCheckout(planId) {
-  const token = getToken()
+  const token = await getFreshToken()
   if (!token) throw new Error('Not logged in.')
   const res = await fetch(`${API_BASE}/api/checkout/subscription`, {
     method: 'POST',

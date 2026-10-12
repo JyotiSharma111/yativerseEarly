@@ -33,7 +33,13 @@ async function parseJson(res) {
 }
 
 async function apiFetch(path, options = {}) {
-  const token = getFoundersToken()
+  // Firebase users send their Firebase ID token (founder-agents-api verifies it
+  // and checks access with yati-api). People still on the old password login
+  // keep using the separate founders token until they move over.
+  const { getFreshToken } = await import('./api')
+  const token = localStorage.getItem('yati_auth_provider') === 'firebase'
+    ? await getFreshToken()
+    : getFoundersToken()
   const headers = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
