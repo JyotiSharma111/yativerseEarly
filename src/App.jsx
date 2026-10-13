@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import Homepage    from './pages/Homepage'
 import Wearables   from './pages/Wearables'
@@ -15,7 +15,6 @@ import YATI from './pages/yAtI'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import CookiePolicy from './pages/CookiePolicy'
 import Login from './pages/Login'
-import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
 import Dashboard from './pages/Dashboard'
 import PlanPage from './pages/PlanPage'
@@ -55,7 +54,7 @@ export default function App() {
           <Route path="/cookie-policy" element={<CookiePolicy />} />
            <Route path="/founder-os" element={<OSPage />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+          <Route path="/signup" element={<Navigate to="/login" replace />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route
             path="/dashboard"

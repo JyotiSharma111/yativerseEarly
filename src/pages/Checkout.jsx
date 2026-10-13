@@ -10,12 +10,11 @@ import { fadeUp, fadeLeft, fadeRight } from '../lib/motion'
 import {
   createOrder,
   createPaymentIntent,
-  register,
   getStoredEmail,
   getToken,
-  requestEmailVerification,
-  confirmEmailVerification,
 } from '../lib/api'
+import { useAuth } from '../lib/auth'
+import FirebaseSignIn from '../components/FirebaseSignIn'
 import { getStripe } from '../lib/stripe'
 import { useCart } from '../lib/cart'
 
@@ -178,18 +177,13 @@ export default function Checkout() {
   }, [])
 
   // Post-order optional account creation
-  const [password, setPassword] = useState('')
-  const [accountBusy, setAccountBusy] = useState(false)
-  const [accountError, setAccountError] = useState('')
-  // True only when the account was created on THIS screen. A leftover login
-  // from an earlier visit must not count: it used to hide the "create a
-  // password" form and show a different person's email (e.g. testing a new
-  // order after using another account in the same browser).
+  const { refresh } = useAuth()
+  // True only when the person signed in on THIS screen. A leftover login from
+  // an earlier visit must not count: it used to hide the sign-in options and
+  // show a different person's email (e.g. testing a new order after using
+  // another account in the same browser).
   const [accountDone, setAccountDone] = useState(false)
-  const [verifyState, setVerifyState] = useState('idle') // 'idle' | 'sent' | 'verified'
-  const [verifyCode, setVerifyCode] = useState('')
-  const [verifyBusy, setVerifyBusy] = useState(false)
-  const [verifyError, setVerifyError] = useState('')
+  const [signedInEmail, setSignedInEmail] = useState('')
   const orderEmail = form.email.trim().toLowerCase()
   const signedInAsOrderEmail = Boolean(getToken()) && (getStoredEmail() || '').trim().toLowerCase() === orderEmail
   const showSignedIn = accountDone || signedInAsOrderEmail
@@ -268,52 +262,6 @@ export default function Checkout() {
     }
   }
 
-  const createAccount = async (e) => {
-    e.preventDefault()
-    setAccountError('')
-    setAccountBusy(true)
-    try {
-      await register(orderEmail, password)
-      setAccountDone(true)
-      // Order history is only readable once the email is proven, so ask for
-      // the code right away. A failure here shouldn't undo the account.
-      try {
-        await requestEmailVerification()
-        setVerifyState('sent')
-      } catch (err) {
-        setVerifyError(err.message)
-      }
-    } catch (err) {
-      setAccountError(err.message)
-    } finally {
-      setAccountBusy(false)
-    }
-  }
-
-  const confirmCode = async (e) => {
-    e.preventDefault()
-    setVerifyError('')
-    setVerifyBusy(true)
-    try {
-      await confirmEmailVerification(verifyCode.trim())
-      setVerifyState('verified')
-    } catch (err) {
-      setVerifyError(err.message)
-    } finally {
-      setVerifyBusy(false)
-    }
-  }
-
-  const resendCode = async () => {
-    setVerifyError('')
-    try {
-      await requestEmailVerification()
-      setVerifyState('sent')
-    } catch (err) {
-      setVerifyError(err.message)
-    }
-  }
-
   const grandTotalCents = placedOrders ? placedOrders.reduce((sum, r) => sum + r.totalCents, 0) : subtotalCents
 
   return (
@@ -376,56 +324,31 @@ export default function Checkout() {
 
                 {showSignedIn ? (
                   <div className="rounded-2xl px-4 py-3 text-sm font-body" style={{ background: `${BLUE}12`, border: `1px solid ${BLUE}30`, color: '#fff' }}>
-                    You're signed in as {getStoredEmail() || form.email}. Use the same email and password to log into the yAtI app once your ring arrives.
-                    {verifyState === 'sent' && (
-                      <form onSubmit={confirmCode} className="mt-3 space-y-2 text-left">
-                        <p className="text-xs text-white/60">
-                          We emailed a 6-digit code to {orderEmail}. Enter it to verify your email and unlock your order history.
-                        </p>
-                        <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="6-digit code"
-                          value={verifyCode} onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
-                          className="w-full bg-white/[0.05] border border-white/10 rounded-full px-4 py-2.5 text-xs text-white placeholder-white/30 outline-none focus:border-brand-purple/50 font-body" />
-                        <button type="submit" disabled={verifyBusy || verifyCode.length !== 6}
-                          className="w-full py-2.5 rounded-full font-display font-semibold text-xs text-black transition-all disabled:opacity-40"
-                          style={{ background: `linear-gradient(135deg,${GOLD},${GOLD2})` }}>
-                          {verifyBusy ? 'Checking…' : 'Verify email'}
-                        </button>
-                        <button type="button" onClick={resendCode} className="text-[11px] text-white/45 underline">Send a new code</button>
-                      </form>
+                    You're signed in as {signedInEmail || getStoredEmail() || form.email}. Use the same login in the yAtI app once your ring arrives.
+                    {signedInEmail && signedInEmail !== orderEmail && (
+                      <p className="mt-2 text-xs text-white/60">
+                        Heads up: this order was placed with {orderEmail}, so it will appear under that email. To see it here, sign in with {orderEmail}.
+                      </p>
                     )}
-                    {verifyState === 'verified' && <p className="mt-2 text-xs" style={{ color: '#7CF0B0' }}>Email verified ✓</p>}
-                    {verifyError && <p className="mt-2 text-xs" style={{ color: '#FF6B8A' }}>{verifyError}</p>}
                   </div>
                 ) : (
-                  <form onSubmit={createAccount} className="text-left space-y-3">
+                  <div className="text-left space-y-3">
                     <p className="font-body text-xs text-white/45 mb-1">
-                      Want to track this order and use the same login in the yAtI app later? Set a password now — totally optional.
+                      Want to track this order and use the same login in the yAtI app later? Sign in with {orderEmail || 'the email you used for this order'} &mdash; no password needed. Totally optional.
                     </p>
-                    <input type="password" placeholder="Create a password (min. 8 characters)" value={password}
-                      onChange={(e) => setPassword(e.target.value)} minLength={8}
-                      className="w-full bg-white/[0.05] border border-white/10 rounded-full px-4 py-2.5 text-xs text-white placeholder-white/30 outline-none focus:border-brand-purple/50 font-body" />
                     {getToken() && !signedInAsOrderEmail && (
                       <p className="text-[11px] font-body text-white/45">
-                        You're currently signed in as {getStoredEmail()}. Creating this account will switch you to {orderEmail || 'the email on this order'}.
+                        You're currently signed in as {getStoredEmail()}. Signing in below will switch you to the account you choose.
                       </p>
                     )}
-                    {accountError && (
-                      <p className="text-xs font-body" style={{ color: '#FF6B8A' }}>
-                        {accountError}
-                        {/already exists/i.test(accountError) && (
-                          <> <Link to="/login" className="underline">Log in instead</Link></>
-                        )}
-                      </p>
-                    )}
-                    <button type="submit" disabled={accountBusy || password.length < 8}
-                      className="w-full py-2.5 rounded-full font-display font-semibold text-xs text-black transition-all disabled:opacity-40"
-                      style={{ background: `linear-gradient(135deg,${GOLD},${GOLD2})` }}>
-                      {accountBusy ? 'Creating account…' : 'Create my account'}
-                    </button>
+                    <FirebaseSignIn
+                      defaultEmail={orderEmail}
+                      onSignedIn={(em) => { setSignedInEmail((em || '').toLowerCase()); setAccountDone(true); refresh() }}
+                    />
                     <p className="font-body text-[11px] text-white/30 text-center">
-                      Prefer to skip this? You can create your account anytime in the yAtI app with {form.email || 'this same email'}.
+                      Prefer to skip this? You can sign in anytime with {form.email || 'this same email'}.
                     </p>
-                  </form>
+                  </div>
                 )}
 
                 <Link to="/" className="inline-flex items-center gap-1.5 mt-6 text-xs font-body text-white/40 hover:text-white/70">

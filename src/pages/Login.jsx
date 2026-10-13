@@ -5,6 +5,7 @@ import { LogIn, AlertCircle, Sparkles, Eye, EyeOff } from "lucide-react";
 import SEO from "../components/SEO";
 import { fadeUp } from "../lib/motion";
 import { login } from "../lib/api";
+import FirebaseSignIn from "../components/FirebaseSignIn";
 import { useAuth, enterDemoMode } from "../lib/auth";
 
 const GOLD = "#C9A84C";
@@ -15,6 +16,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showPasswordLogin, setShowPasswordLogin] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,6 +39,11 @@ export default function Login() {
     }
   }
 
+  function handleFirebaseSignedIn() {
+    refresh();
+    navigate(redirectTo, { replace: true });
+  }
+
   function handleDemo() {
     enterDemoMode();
     refresh();
@@ -54,12 +61,27 @@ export default function Login() {
         </Link>
 
         <div className="rounded-3xl border border-white/5 bg-white/[0.03] p-8">
-          <h1 className="font-display text-2xl font-extrabold text-white">Welcome back</h1>
+          <h1 className="font-display text-2xl font-extrabold text-white">Sign in to yAtIverse</h1>
           <p className="mt-1.5 text-sm text-white/40">
-            Log in with your yAtIverse account to see your Ring data.
+            Sign in or create your account. One account for your Ring, Pendant and Founder OS.
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+          <div className="mt-6">
+            <FirebaseSignIn onSignedIn={handleFirebaseSignedIn} />
+          </div>
+
+          <div className="mt-5 text-center">
+            <button
+              type="button"
+              onClick={() => setShowPasswordLogin((v) => !v)}
+              className="text-xs text-white/35 underline hover:text-white/60"
+            >
+              {showPasswordLogin ? "Hide password sign-in" : "Sign in with a password instead (temporary)"}
+            </button>
+          </div>
+
+          {showPasswordLogin && (
+          <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-white/50">Email</label>
               <input
@@ -114,6 +136,7 @@ export default function Login() {
               {submitting ? "Logging in…" : "Log in"}
             </button>
           </form>
+          )}
 
           <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-white/10" />
@@ -130,10 +153,7 @@ export default function Login() {
           </button>
 
           <p className="mt-6 text-center text-xs text-white/40">
-            Don't have an account?{" "}
-            <Link to="/signup" className="font-medium text-white/70 hover:text-white">
-              Sign up
-            </Link>
+            New here? Just enter your email or use Google &mdash; we&rsquo;ll create your account automatically.
           </p>
         </div>
       </motion.div>

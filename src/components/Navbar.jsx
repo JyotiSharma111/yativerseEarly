@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ShoppingBag } from "lucide-react";
 import { useCart } from "../lib/cart";
+import { useAuth } from "../lib/auth";
 
 const MEGA = {
   wearables: {
@@ -87,6 +88,7 @@ function CartButton({ className = "" }) {
 }
 
 export default function Navbar() {
+  const { authenticated } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [openMega, setOpenMega] = useState(null);
   const [mobileOpen, setMobile] = useState(false);
@@ -189,10 +191,10 @@ export default function Navbar() {
         {/* Right */}
         <div className="hidden lg:flex items-center gap-3">
           <Link
-            to="/waitlist"
+            to={authenticated ? "/dashboard" : "/login"}
             className="text-sm font-medium text-white/45 hover:text-white transition-colors px-3 py-2 font-body"
           >
-            Sign in
+            {authenticated ? "Dashboard" : "Sign in"}
           </Link>
           <CartButton />
           <Link to="/waitlist" className="btn-primary !py-2.5 !px-5 !text-xs">
@@ -341,8 +343,15 @@ export default function Navbar() {
             })}
 
             <Link
+              to={authenticated ? "/dashboard" : "/login"}
+              className="text-center text-base font-medium text-white/60 hover:text-white py-3 mt-4"
+            >
+              {authenticated ? "Dashboard" : "Sign in"}
+            </Link>
+
+            <Link
               to="/waitlist"
-              className="btn-primary justify-center text-base !py-4 mt-6"
+              className="btn-primary justify-center text-base !py-4 mt-2"
             >
               Join yAtIverse →
             </Link>
