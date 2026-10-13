@@ -7,7 +7,15 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import SEO from '../components/SEO'
 import { fadeUp, fadeLeft, fadeRight } from '../lib/motion'
-import { createOrder, createPaymentIntent, register, getStoredEmail, getToken } from '../lib/api'
+import {
+  createOrder,
+  createPaymentIntent,
+  register,
+  getStoredEmail,
+  getToken,
+  requestEmailVerification,
+  confirmEmailVerification,
+} from '../lib/api'
 import { getStripe } from '../lib/stripe'
 import { useCart } from '../lib/cart'
 
@@ -103,17 +111,39 @@ function PaymentForm({ totalCents, onSuccess }) {
   )
 }
 
+// Orders are already saved by the time the payment step shows, but the cart is
+// cleared. Remember them for this tab only so a refresh (or a flaky network)
+// returns to the payment step instead of an empty cart. Only ids, totals and
+// the email are kept — no address or phone.
+const PENDING_KEY = 'yati_pending_payment'
+function loadPending() {
+  try {
+    const raw = sessionStorage.getItem(PENDING_KEY)
+    const v = raw && JSON.parse(raw)
+    return v && Array.isArray(v.orders) && v.orders.length && v.email ? v : null
+  } catch (_) {
+    return null
+  }
+}
+function savePending(orders, email) {
+  try { sessionStorage.setItem(PENDING_KEY, JSON.stringify({ orders, email })) } catch (_) { /* storage unavailable */ }
+}
+function clearPending() {
+  try { sessionStorage.removeItem(PENDING_KEY) } catch (_) { /* ignore */ }
+}
+
 export default function Checkout() {
   const { items, subtotalCents, removeItems, clear } = useCart()
 
-  const [phase, setPhase] = useState('shipping') // 'shipping' | 'payment' | 'done'
+  const [pending] = useState(loadPending)
+  const [phase, setPhase] = useState(pending ? 'payment' : 'shipping') // 'shipping' | 'payment' | 'done'
   const [form, setForm] = useState({
-    name: '', email: '', phone: '',
+    name: '', email: pending ? pending.email : '', phone: '',
     addressLine1: '', addressLine2: '', city: '', state: '', zip: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [placedOrders, setPlacedOrders] = useState(null) // [{ item, orderId, totalCents }]
+  const [placedOrders, setPlacedOrders] = useState(pending ? pending.orders : null) // [{ item, orderId, totalCents }]
   const [clientSecret, setClientSecret] = useState(null)
 
   // Resolved once, client-side: 'loading' | 'ready' | 'unavailable'.
@@ -151,7 +181,18 @@ export default function Checkout() {
   const [password, setPassword] = useState('')
   const [accountBusy, setAccountBusy] = useState(false)
   const [accountError, setAccountError] = useState('')
-  const [accountDone, setAccountDone] = useState(Boolean(getToken()))
+  // True only when the account was created on THIS screen. A leftover login
+  // from an earlier visit must not count: it used to hide the "create a
+  // password" form and show a different person's email (e.g. testing a new
+  // order after using another account in the same browser).
+  const [accountDone, setAccountDone] = useState(false)
+  const [verifyState, setVerifyState] = useState('idle') // 'idle' | 'sent' | 'verified'
+  const [verifyCode, setVerifyCode] = useState('')
+  const [verifyBusy, setVerifyBusy] = useState(false)
+  const [verifyError, setVerifyError] = useState('')
+  const orderEmail = form.email.trim().toLowerCase()
+  const signedInAsOrderEmail = Boolean(getToken()) && (getStoredEmail() || '').trim().toLowerCase() === orderEmail
+  const showSignedIn = accountDone || signedInAsOrderEmail
 
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -167,9 +208,25 @@ export default function Checkout() {
       // Orders already exist at this point (they succeeded below) — no
       // need to touch the cart again. Just let the payment phase show the
       // error with a retry button that re-attempts this same call.
+      if (err.code === 'ORDER_EXPIRED') {
+        // The reservation window passed; these orders can't be paid any more.
+        clearPending()
+        setPlacedOrders(null)
+        setClientSecret(null)
+        setPhase('shipping')
+        setError('Your reservation expired before payment. Please add your ring to the cart again and re-order.')
+        return
+      }
       setError(err.message)
     }
   }
+
+  // Returning to the payment step after a refresh: orders were restored from
+  // sessionStorage above, so just ask for a fresh PaymentIntent.
+  useEffect(() => {
+    if (pending) startPaymentIntent(pending.orders, pending.email)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const submitShipping = async (e) => {
     e.preventDefault()
@@ -202,6 +259,7 @@ export default function Checkout() {
       clear()
       setPlacedOrders(placed)
       setPhase('payment')
+      savePending(placed, form.email)
       await startPaymentIntent(placed, form.email)
     } catch (err) {
       setError(err.message)
@@ -215,12 +273,44 @@ export default function Checkout() {
     setAccountError('')
     setAccountBusy(true)
     try {
-      await register(form.email, password)
+      await register(orderEmail, password)
       setAccountDone(true)
+      // Order history is only readable once the email is proven, so ask for
+      // the code right away. A failure here shouldn't undo the account.
+      try {
+        await requestEmailVerification()
+        setVerifyState('sent')
+      } catch (err) {
+        setVerifyError(err.message)
+      }
     } catch (err) {
       setAccountError(err.message)
     } finally {
       setAccountBusy(false)
+    }
+  }
+
+  const confirmCode = async (e) => {
+    e.preventDefault()
+    setVerifyError('')
+    setVerifyBusy(true)
+    try {
+      await confirmEmailVerification(verifyCode.trim())
+      setVerifyState('verified')
+    } catch (err) {
+      setVerifyError(err.message)
+    } finally {
+      setVerifyBusy(false)
+    }
+  }
+
+  const resendCode = async () => {
+    setVerifyError('')
+    try {
+      await requestEmailVerification()
+      setVerifyState('sent')
+    } catch (err) {
+      setVerifyError(err.message)
     }
   }
 
@@ -284,9 +374,27 @@ export default function Checkout() {
                   Total charged: <span className="text-white font-semibold">${centsToStr(grandTotalCents)}</span>
                 </p>
 
-                {accountDone ? (
+                {showSignedIn ? (
                   <div className="rounded-2xl px-4 py-3 text-sm font-body" style={{ background: `${BLUE}12`, border: `1px solid ${BLUE}30`, color: '#fff' }}>
                     You're signed in as {getStoredEmail() || form.email}. Use the same email and password to log into the yAtI app once your ring arrives.
+                    {verifyState === 'sent' && (
+                      <form onSubmit={confirmCode} className="mt-3 space-y-2 text-left">
+                        <p className="text-xs text-white/60">
+                          We emailed a 6-digit code to {orderEmail}. Enter it to verify your email and unlock your order history.
+                        </p>
+                        <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="6-digit code"
+                          value={verifyCode} onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
+                          className="w-full bg-white/[0.05] border border-white/10 rounded-full px-4 py-2.5 text-xs text-white placeholder-white/30 outline-none focus:border-brand-purple/50 font-body" />
+                        <button type="submit" disabled={verifyBusy || verifyCode.length !== 6}
+                          className="w-full py-2.5 rounded-full font-display font-semibold text-xs text-black transition-all disabled:opacity-40"
+                          style={{ background: `linear-gradient(135deg,${GOLD},${GOLD2})` }}>
+                          {verifyBusy ? 'Checking…' : 'Verify email'}
+                        </button>
+                        <button type="button" onClick={resendCode} className="text-[11px] text-white/45 underline">Send a new code</button>
+                      </form>
+                    )}
+                    {verifyState === 'verified' && <p className="mt-2 text-xs" style={{ color: '#7CF0B0' }}>Email verified ✓</p>}
+                    {verifyError && <p className="mt-2 text-xs" style={{ color: '#FF6B8A' }}>{verifyError}</p>}
                   </div>
                 ) : (
                   <form onSubmit={createAccount} className="text-left space-y-3">
@@ -296,7 +404,19 @@ export default function Checkout() {
                     <input type="password" placeholder="Create a password (min. 8 characters)" value={password}
                       onChange={(e) => setPassword(e.target.value)} minLength={8}
                       className="w-full bg-white/[0.05] border border-white/10 rounded-full px-4 py-2.5 text-xs text-white placeholder-white/30 outline-none focus:border-brand-purple/50 font-body" />
-                    {accountError && <p className="text-xs font-body" style={{ color: '#FF6B8A' }}>{accountError}</p>}
+                    {getToken() && !signedInAsOrderEmail && (
+                      <p className="text-[11px] font-body text-white/45">
+                        You're currently signed in as {getStoredEmail()}. Creating this account will switch you to {orderEmail || 'the email on this order'}.
+                      </p>
+                    )}
+                    {accountError && (
+                      <p className="text-xs font-body" style={{ color: '#FF6B8A' }}>
+                        {accountError}
+                        {/already exists/i.test(accountError) && (
+                          <> <Link to="/login" className="underline">Log in instead</Link></>
+                        )}
+                      </p>
+                    )}
                     <button type="submit" disabled={accountBusy || password.length < 8}
                       className="w-full py-2.5 rounded-full font-display font-semibold text-xs text-black transition-all disabled:opacity-40"
                       style={{ background: `linear-gradient(135deg,${GOLD},${GOLD2})` }}>
@@ -336,7 +456,7 @@ export default function Checkout() {
                       </p>
                     ) : clientSecret && stripeState === 'ready' ? (
                       <Elements stripe={stripeInstance} options={{ clientSecret, appearance: STRIPE_APPEARANCE }}>
-                        <PaymentForm totalCents={grandTotalCents} onSuccess={() => setPhase('done')} />
+                        <PaymentForm totalCents={grandTotalCents} onSuccess={() => { clearPending(); setPhase('done') }} />
                       </Elements>
                     ) : (
                       <p className="font-body text-sm text-white/40 text-center py-6">Preparing secure payment…</p>

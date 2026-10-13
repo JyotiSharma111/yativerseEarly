@@ -62,6 +62,37 @@ export async function register(email, password) {
 }
 
 /**
+ * Emails a 6-digit code to the logged-in account's address. Order history
+ * stays locked (403 EMAIL_NOT_VERIFIED) until confirmEmailVerification()
+ * succeeds — see yati-api emailVerificationCore.js for why.
+ */
+export async function requestEmailVerification() {
+  const token = getToken()
+  if (!token) throw new Error('Not logged in.')
+  const res = await fetch(`${API_BASE}/api/verify-email/request`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(data.error || 'Could not send a verification code.')
+  return data // { alreadyVerified, message }
+}
+
+/** Confirms the emailed 6-digit code. */
+export async function confirmEmailVerification(code) {
+  const token = getToken()
+  if (!token) throw new Error('Not logged in.')
+  const res = await fetch(`${API_BASE}/api/verify-email/confirm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ code }),
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(data.error || 'That code did not work.')
+  return data
+}
+
+/**
  * Requests a password-reset code be emailed to this address — same
  * endpoint the yAtI app uses (see PasswordResets table in
  * yati-api-table-storage-reference.md: a 6-digit code, 15-minute expiry,
@@ -125,7 +156,12 @@ export async function listOrders() {
     headers: { Authorization: `Bearer ${token}` },
   })
   const data = await parseJson(res)
-  if (!res.ok) throw new Error(data.error || 'Could not load orders.')
+  if (!res.ok) {
+    // err.code === 'EMAIL_NOT_VERIFIED' means: show the verify-email prompt.
+    const err = new Error(data.error || 'Could not load orders.')
+    err.code = data.code
+    throw err
+  }
   return data.orders || []
 }
 
@@ -150,7 +186,11 @@ export async function createPaymentIntent({ email, orderIds }) {
     body: JSON.stringify({ email, orderIds }),
   })
   const data = await parseJson(res)
-  if (!res.ok) throw new Error(data.error || 'Could not start payment.')
+  if (!res.ok) {
+    const err = new Error(data.error || 'Could not start payment.')
+    err.code = data.code // e.g. 'ORDER_EXPIRED' (410) when the reservation window passed
+    throw err
+  }
   return data
 }
 
