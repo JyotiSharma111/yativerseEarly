@@ -153,18 +153,6 @@ export async function login(email, password) {
   const data = await parseJson(res)
   if (!res.ok) throw new Error(data.error || 'Could not log in.')
   setSession(data.token, data.email)
-
-  // Silently authenticate with founder-agents-api using the same credentials.
-  // Failure is intentionally swallowed — the main login still succeeds and the
-  // founder-agents token is simply absent until the next login attempt.
-  // Replaced by a single Firebase token once Firebase migration lands.
-  try {
-    const { loginFounders } = await import('./foundersApi')
-    await loginFounders(email, password)
-  } catch {
-    // non-fatal
-  }
-
   return data
 }
 
