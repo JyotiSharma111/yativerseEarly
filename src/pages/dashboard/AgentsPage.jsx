@@ -391,14 +391,21 @@ export default function AgentsPage() {
     setInput('')
     setSending(true)
 
-    // Save the user message immediately so navigating away mid-stream doesn't lose it
-    saveSession(activeSessionId, nextMessages).then(saved => {
-      if (!activeSessionId && saved?.session_id) {
-        pendingSessionIdRef.current = saved.session_id  // sync ref — readable by done handler even before React re-render
-        setActiveSessionId(saved.session_id)
-        setSessions(prev => [{ id: saved.session_id, title: saved.title, message_count: nextMessages.length }, ...prev])
-      }
-    }).catch(() => {})
+    // For new sessions: await save before starting stream so the message survives
+    // tab switches even if the user navigates away before the stream completes.
+    // For existing sessions: fire-and-forget (session already exists in DB).
+    if (!activeSessionId) {
+      try {
+        const saved = await saveSession(null, nextMessages)
+        if (saved?.session_id) {
+          pendingSessionIdRef.current = saved.session_id
+          setActiveSessionId(saved.session_id)
+          setSessions(prev => [{ id: saved.session_id, title: saved.title, message_count: nextMessages.length }, ...prev])
+        }
+      } catch {}
+    } else {
+      saveSession(activeSessionId, nextMessages).catch(() => {})
+    }
 
     try {
       const token = await getFreshToken()
