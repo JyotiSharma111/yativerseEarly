@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import ReactMarkdown from 'react-markdown'
 import {
   Plus, Trash2, Send, Bot, User, Zap, CheckCircle,
   XCircle, AlertCircle, Loader2, ChevronDown, ChevronUp,
@@ -104,7 +105,24 @@ function MessageBubble({ msg }) {
             ? 'bg-brand-purple/20 text-white'
             : 'border border-white/5 bg-white/[0.04] text-white/80'
         }`}>
-          {msg.content}
+          {isUser ? msg.content : (
+            <ReactMarkdown
+              components={{
+                p:      ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                ul:     ({ children }) => <ul className="mb-2 ml-4 list-disc space-y-1">{children}</ul>,
+                ol:     ({ children }) => <ol className="mb-2 ml-4 list-decimal space-y-1">{children}</ol>,
+                li:     ({ children }) => <li>{children}</li>,
+                strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
+                em:     ({ children }) => <em className="italic text-white/70">{children}</em>,
+                code:   ({ children }) => <code className="rounded bg-white/10 px-1 py-0.5 font-mono text-xs text-white/80">{children}</code>,
+                h1:     ({ children }) => <h1 className="mb-1 text-base font-bold text-white">{children}</h1>,
+                h2:     ({ children }) => <h2 className="mb-1 text-sm font-bold text-white">{children}</h2>,
+                h3:     ({ children }) => <h3 className="mb-1 text-sm font-semibold text-white/90">{children}</h3>,
+              }}
+            >
+              {msg.content}
+            </ReactMarkdown>
+          )}
         </div>
         {msg.tool_calls && msg.tool_calls.length > 0 && (
           <button
