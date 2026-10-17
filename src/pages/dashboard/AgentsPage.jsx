@@ -6,11 +6,10 @@ import {
 } from 'lucide-react'
 import Sidebar from '../../components/dashboard/Sidebar'
 import { useAuth } from '../../lib/auth'
-import { getEntitlements } from '../../lib/api'
+import { getEntitlements, getFreshToken } from '../../lib/api'
 import {
-  getFoundersToken,
   listSessions, getChatSession, saveSession, deleteSession,
-  sendMessage, approveProspecting,
+  approveProspecting,
 } from '../../lib/foundersApi'
 import { useSSEStream } from '../../hooks/useSSEStream'
 
@@ -379,7 +378,7 @@ export default function AgentsPage() {
     if (activeSessionId === id) handleNewChat()
   }
 
-  // Send a chat message
+  // Send a chat message via SSE stream
   async function handleSend(e) {
     e.preventDefault()
     const text = input.trim()
@@ -392,38 +391,61 @@ export default function AgentsPage() {
     setSending(true)
 
     try {
-      const result = await sendMessage(text)
-      const assistantContent = typeof result === 'string' ? result
-        : result.reply
-          ?? result.summary
-          ?? result.action
-          ?? result.message
-          ?? (result.skipped ? "I'm here to help with your pipeline. Try asking me to find leads, coach a deal, or draft outreach." : null)
-          ?? JSON.stringify(result)
-      const assistantMsg = { role: 'assistant', content: assistantContent }
-      const finalMessages = [...nextMessages, assistantMsg]
-      setMessages(finalMessages)
-
-      // Save session and keep cache in sync
-      const saved = await saveSession(activeSessionId, finalMessages)
-      const sid = activeSessionId || saved.session_id
-      msgCacheRef.current[sid] = finalMessages
-      if (!activeSessionId) {
-        setActiveSessionId(saved.session_id)
-        setSessions((prev) => [{ id: saved.session_id, title: saved.title, message_count: finalMessages.length }, ...prev])
-      }
+      const token = await getFreshToken()
+      await startStream(
+        `${FOUNDERS_API_BASE}/api/v1/orchestrator/stream`,
+        { message: text },
+        token,
+      )
+      // Result is handled in the useEffect below that watches sseState
     } catch (err) {
       showToast(err.message || 'Failed to send', 'error')
       setMessages(nextMessages.slice(0, -1))
-    } finally {
       setSending(false)
     }
   }
 
+  // When SSE stream finishes, extract reply and save to session
+  const pendingMessagesRef = useRef(null)
+  useEffect(() => {
+    if (sseState === 'connecting' || sseState === 'streaming') {
+      // Store messages snapshot so we can append the reply when done
+      pendingMessagesRef.current = messages.filter(m => m.role !== '__typing__')
+    }
+    if (sseState === 'done') {
+      const doneEvent = sseEvents.find(ev => ev.type === 'done')
+      const result = doneEvent?.result
+      const assistantContent = result?.reply
+        ?? result?.summary
+        ?? result?.action
+        ?? (result?.skipped ? "I'm here to help with your pipeline. Try asking me to find leads, coach a deal, or draft outreach." : null)
+        ?? 'Done.'
+
+      const base = pendingMessagesRef.current ?? messages.filter(m => m.role !== '__typing__')
+      const finalMessages = [...base, { role: 'assistant', content: assistantContent }]
+      setMessages(finalMessages)
+      setSending(false)
+
+      saveSession(activeSessionId, finalMessages).then(saved => {
+        const sid = activeSessionId || saved.session_id
+        msgCacheRef.current[sid] = finalMessages
+        if (!activeSessionId) {
+          setActiveSessionId(saved.session_id)
+          setSessions(prev => [{ id: saved.session_id, title: saved.title, message_count: finalMessages.length }, ...prev])
+        }
+      }).catch(() => {})
+    }
+    if (sseState === 'error') {
+      showToast(sseError || 'Stream error', 'error')
+      setMessages(prev => prev.filter(m => m.role !== '__typing__'))
+      setSending(false)
+    }
+  }, [sseState]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Start prospecting SSE stream
   async function handleStartProspecting(instruction) {
     if (demo) { showToast('Sign in to run prospecting', 'error'); return }
-    const token = getFoundersToken()
+    const token = await getFreshToken()
     await startStream(
       `${FOUNDERS_API_BASE}/api/v1/prospecting/stream`,
       { instruction },
@@ -499,11 +521,16 @@ export default function AgentsPage() {
                 ))}
                 {sending && (
                   <div className="flex gap-3">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10">
                       <Loader2 size={13} className="animate-spin text-white/40" />
                     </div>
-                    <div className="rounded-2xl border border-white/5 bg-white/[0.04] px-4 py-2.5 text-sm text-white/30">
-                      Thinking…
+                    <div className="flex flex-col gap-1 rounded-2xl border border-white/5 bg-white/[0.04] px-4 py-2.5 text-sm text-white/30">
+                      {sseEvents.filter(ev => ev.type === 'step').slice(-1).map((ev, i) => (
+                        <span key={i} className="text-white/50">{ev.detail}</span>
+                      ))}
+                      {sseEvents.filter(ev => ev.type === 'step').length === 0 && (
+                        <span>Thinking…</span>
+                      )}
                     </div>
                   </div>
                 )}
