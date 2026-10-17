@@ -416,8 +416,7 @@ export default function AgentsPage() {
       const doneEvent = sseEvents.find(ev => ev.type === 'done')
       const result = doneEvent?.result
       const assistantContent = result?.reply
-        ?? result?.summary
-        ?? result?.action
+        ?? result?.reasoning
         ?? (result?.skipped ? "I'm here to help with your pipeline. Try asking me to find leads, coach a deal, or draft outreach." : null)
         ?? 'Done.'
 
