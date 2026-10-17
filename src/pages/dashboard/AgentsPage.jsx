@@ -1,45 +1,13 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import {
   Plus, Trash2, Send, Bot, User, Zap, CheckCircle,
-  XCircle, AlertCircle, Loader2, ChevronDown, ChevronUp,
+  AlertCircle, Loader2, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import Sidebar from '../../components/dashboard/Sidebar'
 import { useAuth } from '../../lib/auth'
-import { getEntitlements, getFreshToken } from '../../lib/api'
-import {
-  listSessions, getChatSession, saveSession, deleteSession,
-  approveProspecting,
-} from '../../lib/foundersApi'
-import { useSSEStream } from '../../hooks/useSSEStream'
-
-const FOUNDERS_API_BASE =
-  import.meta.env.VITE_FOUNDERS_API_BASE || 'https://founder-agents-api.onrender.com'
-
-// ---------------------------------------------------------------------------
-// Sample data for demo mode
-// ---------------------------------------------------------------------------
-const DEMO_SESSIONS = [
-  { id: 'demo-1', title: 'Logistics outreach strategy', message_count: 4 },
-  { id: 'demo-2', title: 'Find VP Ops leads in logistics', message_count: 6 },
-]
-
-const DEMO_MESSAGES = {
-  'demo-1': [
-    { role: 'user',      content: 'What deals need attention this week?' },
-    { role: 'assistant', content: 'Based on your HubSpot pipeline: LogiSync has been in Negotiation for 14 days without activity — that\'s the highest risk. Priority Logistics is in Proposal Sent with a close date in 6 weeks, looking healthy.' },
-    { role: 'user',      content: 'Draft a follow-up for LogiSync' },
-    { role: 'assistant', content: 'Queued a follow-up draft for LogiSync — check the Drafts tab in ~60 seconds once it\'s generated.' },
-  ],
-  'demo-2': [
-    { role: 'user',      content: 'Find VP-level ops contacts at logistics firms' },
-    { role: 'assistant', content: 'Running prospecting for VP Operations contacts at logistics companies. I\'ll search Apollo for matching profiles and score them against your ICP.' },
-    { role: 'user',      content: 'How many contacts did we find?' },
-    { role: 'assistant', content: 'Found 5 contacts — 2 scored High, 2 Medium, 1 Low. The High-score leads are Iqbal Khan (CEO/COO, Priority Logistics) and Sarah Chen (VP Operations, FleetTrack Pro). Both match your ICP on industry, company size, and seniority.' },
-    { role: 'user',      content: 'Generate outreach for the high-score ones' },
-    { role: 'assistant', content: 'Outreach drafts queued for Iqbal Khan and Sarah Chen. Head to the Drafts tab to review and approve before sending.' },
-  ],
-}
+import { getEntitlements } from '../../lib/api'
+import { useChatContext } from '../../lib/chatContext'
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -276,214 +244,43 @@ function ApprovalPanel({ hitlData, onApprove, onSkip }) {
 }
 
 // ---------------------------------------------------------------------------
-// Main page
+// Main page — UI only, all state comes from ChatContext
 // ---------------------------------------------------------------------------
 
 export default function AgentsPage() {
-  const { email, demo, logout } = useAuth()
+  const { logout, demo } = useAuth()
   const [entitlements, setEntitlements] = useState(null)
+  const [input, setInput] = useState('')
 
-  // Sessions
-  const [sessions, setSessions]       = useState([])
-  const [sessionsLoading, setSessionsLoading] = useState(true)
-  const [activeSessionId, setActiveSessionId] = useState(null)
-
-  // Messages
-  const [messages, setMessages]       = useState([])
-  const [input, setInput]             = useState('')
-  const [sending, setSending]         = useState(false)
-
-  // Toast
-  const [toast, setToast]             = useState(null)
-
-  // Prospecting SSE
-  const { state: sseState, events: sseEvents, hitlData, error: sseError, startStream, reset: resetSSE } = useSSEStream()
+  const {
+    sessions, sessionsLoading, activeSessionId,
+    messages, sending,
+    sseState, sseEvents, hitlData, sseError,
+    toast,
+    loadSession, handleNewChat, handleDeleteSession,
+    handleSend, handleStartProspecting, handleApprove,
+    resetSSE,
+  } = useChatContext()
 
   const messagesEndRef = useRef(null)
-  const msgCacheRef = useRef({})       // sessionId → messages[], preserves state across switches
-  const pendingSessionIdRef = useRef(null)  // set immediately when early save returns, before React state update
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on new messages / stream updates
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, sseState])
 
-  // Load entitlements
+  // Load entitlements for sidebar label
   useEffect(() => {
     if (demo) { setEntitlements({ planName: 'Founder', status: 'trial' }); return }
     getEntitlements().then(setEntitlements).catch(() => setEntitlements(null))
   }, [demo])
 
-  // Load sessions
-  useEffect(() => {
-    if (demo) {
-      // Pre-populate cache with demo messages so switching works offline
-      msgCacheRef.current = { ...DEMO_MESSAGES }
-      setSessions(DEMO_SESSIONS)
-      setMessages(DEMO_MESSAGES['demo-1'])
-      setActiveSessionId(DEMO_SESSIONS[0].id)
-      setSessionsLoading(false)
-      return
-    }
-    listSessions()
-      .then((data) => {
-        const list = data.sessions ?? []
-        setSessions(list)
-        if (list.length > 0) loadSession(list[0].id)
-        else setSessionsLoading(false)
-      })
-      .catch(() => setSessionsLoading(false))
-  }, [demo])
-
-  async function loadSession(id) {
-    // Save current session messages to cache before switching
-    if (activeSessionId) {
-      msgCacheRef.current[activeSessionId] = messages
-    }
-
-    // Serve from cache instantly if available
-    if (msgCacheRef.current[id]) {
-      setMessages(msgCacheRef.current[id])
-      setActiveSessionId(id)
-      resetSSE()
-      return
-    }
-
-    // Otherwise fetch from API
-    setSessionsLoading(true)
-    try {
-      const data = await getChatSession(id)
-      const fetched = data.messages ?? []
-      msgCacheRef.current[id] = fetched
-      setMessages(fetched)
-      setActiveSessionId(id)
-    } catch {
-      setMessages([])
-      setActiveSessionId(id)
-    } finally {
-      setSessionsLoading(false)
-    }
-    resetSSE()
-  }
-
-  function handleNewChat() {
-    setActiveSessionId(null)
-    setMessages([])
-    resetSSE()
-  }
-
-  async function handleDeleteSession(id) {
-    if (demo) return
-    await deleteSession(id).catch(() => {})
-    setSessions((prev) => prev.filter((s) => s.id !== id))
-    if (activeSessionId === id) handleNewChat()
-  }
-
-  // Send a chat message via SSE stream
-  async function handleSend(e) {
+  async function onSubmit(e) {
     e.preventDefault()
     const text = input.trim()
-    if (!text || sending || demo) return
-
-    const userMsg = { role: 'user', content: text }
-    const nextMessages = [...messages, userMsg]
-    setMessages(nextMessages)
+    if (!text) return
     setInput('')
-    setSending(true)
-
-    // For new sessions: await save before starting stream so the message survives
-    // tab switches even if the user navigates away before the stream completes.
-    // For existing sessions: fire-and-forget (session already exists in DB).
-    if (!activeSessionId) {
-      try {
-        const saved = await saveSession(null, nextMessages)
-        if (saved?.session_id) {
-          pendingSessionIdRef.current = saved.session_id
-          setActiveSessionId(saved.session_id)
-          setSessions(prev => [{ id: saved.session_id, title: saved.title, message_count: nextMessages.length }, ...prev])
-        }
-      } catch {}
-    } else {
-      saveSession(activeSessionId, nextMessages).catch(() => {})
-    }
-
-    try {
-      const token = await getFreshToken()
-      await startStream(
-        `${FOUNDERS_API_BASE}/api/v1/orchestrator/stream`,
-        { message: text, history: messages.filter(m => m.role !== '__typing__') },
-        token,
-      )
-      // Result is handled in the useEffect below that watches sseState
-    } catch (err) {
-      showToast(err.message || 'Failed to send', 'error')
-      setMessages(nextMessages.slice(0, -1))
-      setSending(false)
-    }
-  }
-
-  // When SSE stream finishes, extract reply and save to session
-  const pendingMessagesRef = useRef(null)
-  useEffect(() => {
-    if (sseState === 'connecting' || sseState === 'streaming') {
-      // Store messages snapshot so we can append the reply when done
-      pendingMessagesRef.current = messages.filter(m => m.role !== '__typing__')
-    }
-    if (sseState === 'done') {
-      const doneEvent = sseEvents.find(ev => ev.type === 'done')
-      const result = doneEvent?.result
-      const assistantContent = result?.reply
-        ?? result?.reasoning
-        ?? (result?.skipped ? "I'm here to help with your pipeline. Try asking me to find leads, coach a deal, or draft outreach." : null)
-        ?? 'Done.'
-
-      const base = pendingMessagesRef.current ?? messages.filter(m => m.role !== '__typing__')
-      const finalMessages = [...base, { role: 'assistant', content: assistantContent }]
-      setMessages(finalMessages)
-      setSending(false)
-
-      const knownSessionId = activeSessionId || pendingSessionIdRef.current
-      saveSession(knownSessionId, finalMessages).then(saved => {
-        const sid = knownSessionId || saved.session_id
-        msgCacheRef.current[sid] = finalMessages
-        if (!knownSessionId) {
-          setActiveSessionId(saved.session_id)
-          setSessions(prev => [{ id: saved.session_id, title: saved.title, message_count: finalMessages.length }, ...prev])
-        }
-      }).catch(() => {})
-    }
-    if (sseState === 'error') {
-      showToast(sseError || 'Stream error', 'error')
-      setMessages(prev => prev.filter(m => m.role !== '__typing__'))
-      setSending(false)
-    }
-  }, [sseState]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Start prospecting SSE stream
-  async function handleStartProspecting(instruction) {
-    if (demo) { showToast('Sign in to run prospecting', 'error'); return }
-    const token = await getFreshToken()
-    await startStream(
-      `${FOUNDERS_API_BASE}/api/v1/prospecting/stream`,
-      { instruction },
-      token,
-    )
-  }
-
-  // HITL approve
-  async function handleApprove(runId, approvedIds) {
-    try {
-      const res = await approveProspecting(runId, approvedIds)
-      showToast(res.message || `${approvedIds.length} contacts queued`, 'success')
-      resetSSE()
-    } catch (err) {
-      showToast(err.message || 'Approval failed', 'error')
-    }
-  }
-
-  function showToast(message, type) {
-    setToast({ message, type })
-    setTimeout(() => setToast(null), 4000)
+    await handleSend(text)
   }
 
   const isStreaming = sseState === 'connecting' || sseState === 'streaming'
@@ -523,7 +320,7 @@ export default function AgentsPage() {
                   {['What deals need attention?', 'Summarise my pipeline', 'Find VP Ops leads in logistics'].map((s) => (
                     <button
                       key={s}
-                      onClick={() => { setInput(s) }}
+                      onClick={() => setInput(s)}
                       className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/40 transition hover:border-white/20 hover:text-white/70"
                     >
                       {s}
@@ -570,7 +367,7 @@ export default function AgentsPage() {
             />
           )}
 
-          {/* Company selection panel — simplified for now */}
+          {/* Company selection panel */}
           {sseState === 'pending_company_selection' && hitlData && (
             <div className="mx-4 my-2 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-xs text-white/50">
               Company selection panel — {hitlData.companies?.length ?? 0} companies found.
@@ -582,7 +379,7 @@ export default function AgentsPage() {
           <ProspectingPanel onStart={handleStartProspecting} streaming={isStreaming} />
 
           {/* Chat input */}
-          <form onSubmit={handleSend} className="flex items-center gap-3 border-t border-white/5 px-4 py-3">
+          <form onSubmit={onSubmit} className="flex items-center gap-3 border-t border-white/5 px-4 py-3">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}

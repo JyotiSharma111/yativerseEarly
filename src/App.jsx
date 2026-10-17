@@ -24,6 +24,7 @@ import DraftsPage from './pages/dashboard/DraftsPage'
 import DealsPage from './pages/dashboard/DealsPage'
 import SettingsPage from './pages/dashboard/SettingsPage'
 import { AuthProvider, RequireAuth, RequireFounderOS } from './lib/auth'
+import { ChatProvider } from './lib/chatContext'
 import { CartProvider } from './lib/cart'
 import CartDrawer from './components/CartDrawer'
 
@@ -36,6 +37,7 @@ function ScrollToTop() {
 export default function App() {
   return (
     <AuthProvider>
+      <ChatProvider>
       <CartProvider>
         <ScrollToTop />
         <Routes>
@@ -123,6 +125,7 @@ export default function App() {
         </Routes>
         <CartDrawer />
       </CartProvider>
+      </ChatProvider>
     </AuthProvider>
   )
 }
