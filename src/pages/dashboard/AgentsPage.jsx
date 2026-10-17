@@ -394,7 +394,7 @@ export default function AgentsPage() {
       const token = await getFreshToken()
       await startStream(
         `${FOUNDERS_API_BASE}/api/v1/orchestrator/stream`,
-        { message: text },
+        { message: text, history: messages.filter(m => m.role !== '__typing__') },
         token,
       )
       // Result is handled in the useEffect below that watches sseState
