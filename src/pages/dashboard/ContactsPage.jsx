@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Search, Zap, CheckCircle, AlertCircle, X,
-  Mail, Linkedin, Phone, MapPin, Building2,
+  Mail, Link2, Phone, MapPin, Building2,
   ExternalLink, Copy, Globe, TrendingUp,
 } from "lucide-react";
 import Sidebar from "../../components/dashboard/Sidebar";
@@ -103,7 +103,7 @@ function DetailPanel({ contact, onClose, onDraft, drafting, demo }) {
 
               {contact.linkedin_url ? (
                 <div className="flex items-center gap-2.5 text-sm">
-                  <Linkedin size={14} className="shrink-0 text-white/30" />
+                  <Link2 size={14} className="shrink-0 text-white/30" />
                   <a
                     href={contact.linkedin_url}
                     target="_blank"
