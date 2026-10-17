@@ -300,7 +300,8 @@ export default function AgentsPage() {
   const { state: sseState, events: sseEvents, hitlData, error: sseError, startStream, reset: resetSSE } = useSSEStream()
 
   const messagesEndRef = useRef(null)
-  const msgCacheRef = useRef({})  // sessionId → messages[], preserves state across switches
+  const msgCacheRef = useRef({})       // sessionId → messages[], preserves state across switches
+  const pendingSessionIdRef = useRef(null)  // set immediately when early save returns, before React state update
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -390,6 +391,15 @@ export default function AgentsPage() {
     setInput('')
     setSending(true)
 
+    // Save the user message immediately so navigating away mid-stream doesn't lose it
+    saveSession(activeSessionId, nextMessages).then(saved => {
+      if (!activeSessionId && saved?.session_id) {
+        pendingSessionIdRef.current = saved.session_id  // sync ref — readable by done handler even before React re-render
+        setActiveSessionId(saved.session_id)
+        setSessions(prev => [{ id: saved.session_id, title: saved.title, message_count: nextMessages.length }, ...prev])
+      }
+    }).catch(() => {})
+
     try {
       const token = await getFreshToken()
       await startStream(
@@ -425,10 +435,11 @@ export default function AgentsPage() {
       setMessages(finalMessages)
       setSending(false)
 
-      saveSession(activeSessionId, finalMessages).then(saved => {
-        const sid = activeSessionId || saved.session_id
+      const knownSessionId = activeSessionId || pendingSessionIdRef.current
+      saveSession(knownSessionId, finalMessages).then(saved => {
+        const sid = knownSessionId || saved.session_id
         msgCacheRef.current[sid] = finalMessages
-        if (!activeSessionId) {
+        if (!knownSessionId) {
           setActiveSessionId(saved.session_id)
           setSessions(prev => [{ id: saved.session_id, title: saved.title, message_count: finalMessages.length }, ...prev])
         }
