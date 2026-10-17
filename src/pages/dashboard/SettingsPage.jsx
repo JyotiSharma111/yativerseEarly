@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Save, Loader2, CheckCircle, AlertCircle, X, Globe, Send, LogOut,
 } from 'lucide-react'
@@ -18,6 +18,7 @@ const COMPANY_SIZE_OPTIONS = ['1-10', '11-50', '51-200', '201-500', '501-1000', 
 // ---------------------------------------------------------------------------
 function TagInput({ tags, onChange, placeholder }) {
   const [draft, setDraft] = useState('')
+  const inputRef = useRef(null)
 
   function add(value) {
     const v = value.trim().toLowerCase()
@@ -37,7 +38,7 @@ function TagInput({ tags, onChange, placeholder }) {
   return (
     <div
       className="flex min-h-[42px] flex-wrap gap-1.5 cursor-text rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 focus-within:border-white/20"
-      onClick={() => document.activeElement.blur()}
+      onClick={() => inputRef.current?.focus()}
     >
       {tags.map((t) => (
         <span key={t} className="flex items-center gap-1 rounded-md border border-white/10 bg-white/10 px-2 py-0.5 text-xs text-white/70">
@@ -48,6 +49,7 @@ function TagInput({ tags, onChange, placeholder }) {
         </span>
       ))}
       <input
+        ref={inputRef}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={onKey}
