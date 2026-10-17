@@ -376,7 +376,12 @@ export default function AgentsPage() {
     try {
       const result = await sendMessage(text)
       const assistantContent = typeof result === 'string' ? result
-        : result.summary ?? result.action ?? result.message ?? JSON.stringify(result)
+        : result.reply
+          ?? result.summary
+          ?? result.action
+          ?? result.message
+          ?? (result.skipped ? "I'm here to help with your pipeline. Try asking me to find leads, coach a deal, or draft outreach." : null)
+          ?? JSON.stringify(result)
       const assistantMsg = { role: 'assistant', content: assistantContent }
       const finalMessages = [...nextMessages, assistantMsg]
       setMessages(finalMessages)
