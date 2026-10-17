@@ -11,19 +11,16 @@ import {
   Lock,
   LogOut,
 } from "lucide-react";
+import { useEntitlements } from "../../lib/useEntitlements";
 
-// Items with a `to` are real, working navigation. Items without one are
-// still just visual/inert — matches this sidebar's existing pattern
-// (Overview/Ring were placeholders before "Plan" became the first real
-// second destination in the dashboard).
 const LIVE_ITEMS = [
   { icon: LayoutGrid,  label: "Overview",  to: "/dashboard" },
   { icon: Footprints,  label: "Ring" },
   { icon: CreditCard,  label: "Plan",      to: "/dashboard/plan" },
-  { icon: Bot,         label: "AI Agents", to: "/dashboard/agents" },
-  { icon: Users,       label: "Contacts",  to: "/dashboard/contacts" },
-  { icon: Mail,        label: "Drafts",    to: "/dashboard/drafts" },
-  { icon: TrendingUp,  label: "Deals",     to: "/dashboard/deals" },
+  { icon: Bot,         label: "AI Agents", to: "/dashboard/agents",   founderOS: true },
+  { icon: Users,       label: "Contacts",  to: "/dashboard/contacts", founderOS: true },
+  { icon: Mail,        label: "Drafts",    to: "/dashboard/drafts",   founderOS: true },
+  { icon: TrendingUp,  label: "Deals",     to: "/dashboard/deals",    founderOS: true },
   { icon: Settings,    label: "Settings",  to: "/dashboard/settings" },
 ];
 
@@ -45,6 +42,8 @@ const PLAN_PILL_STYLES = {
 
 export default function Sidebar({ onLogout, planLabel, planStatus }) {
   const { pathname } = useLocation();
+  const { data: entitlements } = useEntitlements();
+  const hasFounderOS = entitlements?.founderOS ?? true; // default true while loading to avoid flash
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-white/5 bg-brand-bg2 p-5 lg:flex">
@@ -55,11 +54,6 @@ export default function Sidebar({ onLogout, planLabel, planStatus }) {
         </span>
       </Link>
 
-      {/* Always-visible "which plan am I on" answer — added because the
-          plan was only discoverable by opening /dashboard/plan, which
-          founders found unclear. planLabel is undefined while entitlements
-          are still loading, so this renders nothing rather than a
-          misleading placeholder. */}
       {planLabel && (
         <Link
           to="/dashboard/plan"
@@ -75,8 +69,23 @@ export default function Sidebar({ onLogout, planLabel, planStatus }) {
       )}
 
       <nav className="flex flex-col gap-1">
-        {LIVE_ITEMS.map(({ icon: Icon, label, to }) => {
+        {LIVE_ITEMS.map(({ icon: Icon, label, to, founderOS: needsFounderOS }) => {
+          const locked = needsFounderOS && !hasFounderOS;
           const active = to && pathname === to;
+
+          if (locked) {
+            return (
+              <div
+                key={label}
+                title="Upgrade your plan to unlock"
+                className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/25"
+              >
+                <Lock size={15} />
+                {label}
+              </div>
+            );
+          }
+
           const className = `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
             active ? "bg-white/10 text-white" : "text-white hover:bg-white/5"
           }`;

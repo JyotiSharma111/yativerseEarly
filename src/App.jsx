@@ -23,7 +23,7 @@ import ContactsPage from './pages/dashboard/ContactsPage'
 import DraftsPage from './pages/dashboard/DraftsPage'
 import DealsPage from './pages/dashboard/DealsPage'
 import SettingsPage from './pages/dashboard/SettingsPage'
-import { AuthProvider, RequireAuth } from './lib/auth'
+import { AuthProvider, RequireAuth, RequireFounderOS } from './lib/auth'
 import { CartProvider } from './lib/cart'
 import CartDrawer from './components/CartDrawer'
 
@@ -76,7 +76,9 @@ export default function App() {
             path="/dashboard/agents"
             element={
               <RequireAuth>
-                <AgentsPage />
+                <RequireFounderOS>
+                  <AgentsPage />
+                </RequireFounderOS>
               </RequireAuth>
             }
           />
@@ -84,7 +86,9 @@ export default function App() {
             path="/dashboard/contacts"
             element={
               <RequireAuth>
-                <ContactsPage />
+                <RequireFounderOS>
+                  <ContactsPage />
+                </RequireFounderOS>
               </RequireAuth>
             }
           />
@@ -92,7 +96,9 @@ export default function App() {
             path="/dashboard/drafts"
             element={
               <RequireAuth>
-                <DraftsPage />
+                <RequireFounderOS>
+                  <DraftsPage />
+                </RequireFounderOS>
               </RequireAuth>
             }
           />
@@ -100,7 +106,9 @@ export default function App() {
             path="/dashboard/deals"
             element={
               <RequireAuth>
-                <DealsPage />
+                <RequireFounderOS>
+                  <DealsPage />
+                </RequireFounderOS>
               </RequireAuth>
             }
           />

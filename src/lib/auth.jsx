@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from "rea
 import { Navigate, useLocation } from "react-router-dom";
 import { isAuthenticated, getStoredEmail, clearSession } from "./api";
 import { clearFoundersToken } from "./foundersApi";
+import { clearEntitlementsCache, useEntitlements } from "./useEntitlements";
 
 const DEMO_KEY = "yati_demo_mode";
 
@@ -50,6 +51,7 @@ export function AuthProvider({ children }) {
       }
       clearSession();
       clearFoundersToken();
+      clearEntitlementsCache();
       exitDemoMode();
       refresh();
     },
@@ -70,6 +72,21 @@ export function RequireAuth({ children }) {
 
   if (!authenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  return children;
+}
+
+/**
+ * Gates Founder OS pages (Agents, Contacts, Drafts, Deals).
+ * While entitlements are loading, renders nothing to avoid a flash.
+ * If founderOS is false, redirects to the plan page.
+ */
+export function RequireFounderOS({ children }) {
+  const { data, loading } = useEntitlements();
+
+  if (loading) return null;
+  if (!data?.founderOS) {
+    return <Navigate to="/dashboard/plan" replace />;
   }
   return children;
 }
