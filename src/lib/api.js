@@ -46,6 +46,23 @@ export function clearSession() {
   localStorage.removeItem(TOKEN_KEY)
   localStorage.removeItem(EMAIL_KEY)
   localStorage.removeItem('yati_auth_provider')
+  localStorage.removeItem('yati_session_only')
+}
+
+/**
+ * "Remember me" unchecked means: stay signed in only while this browser tab
+ * session lasts. sessionStorage disappears when the tab closes, so if the
+ * session-only flag is set but the per-tab marker is gone, the person closed
+ * the browser: drop our copy of the login.
+ */
+export function enforceSessionOnly() {
+  try {
+    if (localStorage.getItem('yati_session_only') === '1' && !sessionStorage.getItem('yati_session_alive')) {
+      clearSession()
+    }
+  } catch {
+    // storage unavailable: nothing to enforce
+  }
 }
 
 async function parseJson(res) {
