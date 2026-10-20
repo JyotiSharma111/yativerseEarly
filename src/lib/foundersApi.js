@@ -93,6 +93,10 @@ export async function listApprovals() {
   return apiFetch('/api/v1/approvals')
 }
 
+export async function getApproval(draftId) {
+  return apiFetch(`/api/v1/approvals/${draftId}`)
+}
+
 export async function approveApproval(approvalId) {
   return apiFetch(`/api/v1/approvals/${approvalId}/approve`, { method: 'POST' })
 }

@@ -3,7 +3,7 @@ import { Mail, CheckCircle, XCircle, AlertCircle, RefreshCw } from "lucide-react
 import Sidebar from "../../components/dashboard/Sidebar";
 import { useAuth } from "../../lib/auth";
 import { getEntitlements } from "../../lib/api";
-import { listApprovals, approveApproval, rejectApproval } from "../../lib/foundersApi";
+import { listApprovals, getApproval, approveApproval, rejectApproval } from "../../lib/foundersApi";
 
 const SAMPLE_APPROVALS = [
   {
@@ -24,6 +24,11 @@ const SAMPLE_APPROVALS = [
 
 const POLL_INTERVAL = 30_000;
 
+// The API identifies drafts by draft_id and names the contact context_name.
+function normalizeApproval(a) {
+  return { ...a, id: a.draft_id ?? a.id, contact_name: a.context_name ?? a.contact_name };
+}
+
 export default function DraftsPage() {
   const { email, demo, logout } = useAuth();
   const [approvals, setApprovals]   = useState([]);
@@ -33,12 +38,13 @@ export default function DraftsPage() {
   const [toast, setToast]           = useState(null);
   const [entitlements, setEntitlements] = useState(null);
   const [expanded, setExpanded]     = useState({});
+  const [details, setDetails]       = useState({});
 
   const load = useCallback(async () => {
     if (demo) { setApprovals(SAMPLE_APPROVALS); setLoading(false); return; }
     try {
       const data = await listApprovals();
-      setApprovals(Array.isArray(data) ? data : data.approvals ?? []);
+      setApprovals((Array.isArray(data) ? data : data.approvals ?? []).map(normalizeApproval));
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -95,6 +101,14 @@ export default function DraftsPage() {
 
   function toggleExpand(id) {
     setExpanded((e) => ({ ...e, [id]: !e[id] }));
+    // The list endpoint omits the body, so fetch it the first time a card is opened.
+    const needsFetch = !demo && !expanded[id] && !details[id]
+      && !approvals.find((a) => a.id === id)?.body;
+    if (!needsFetch) return;
+    setDetails((d) => ({ ...d, [id]: { loading: true } }));
+    getApproval(id)
+      .then((full) => setDetails((d) => ({ ...d, [id]: { body: full.body, contact_email: full.contact_email } })))
+      .catch((err) => setDetails((d) => ({ ...d, [id]: { error: err.message || "Failed to load draft" } })));
   }
 
   return (
@@ -151,6 +165,7 @@ export default function DraftsPage() {
                     <p className="mt-0.5 text-xs text-white/40">
                       To: <span className="text-white/60">{a.contact_name}</span>
                       {a.company && <span> · {a.company}</span>}
+                      {details[a.id]?.contact_email && <span> · {details[a.id].contact_email}</span>}
                     </p>
                   </div>
                   <button
@@ -164,7 +179,9 @@ export default function DraftsPage() {
                 {/* Body preview */}
                 {expanded[a.id] && (
                   <pre className="mt-4 whitespace-pre-wrap rounded-xl border border-white/5 bg-black/20 p-4 font-body text-xs leading-relaxed text-white/60">
-                    {a.body}
+                    {a.body
+                      ?? (details[a.id]?.loading ? "Loading…"
+                        : details[a.id]?.error ?? details[a.id]?.body)}
                   </pre>
                 )}
 
