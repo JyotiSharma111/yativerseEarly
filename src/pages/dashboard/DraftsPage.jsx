@@ -1,9 +1,15 @@
-import { useEffect, useState, useCallback } from "react";
-import { Mail, CheckCircle, XCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import {
+  Mail, CheckCircle, XCircle, AlertCircle, RefreshCw, Pencil, Sparkles, X, Plus,
+} from "lucide-react";
 import Sidebar from "../../components/dashboard/Sidebar";
+import { REAUTHED_EVENT } from "../../components/SessionExpiredDialog";
 import { useAuth } from "../../lib/auth";
 import { getEntitlements } from "../../lib/api";
-import { listApprovals, getApproval, approveApproval, rejectApproval } from "../../lib/foundersApi";
+import {
+  listApprovals, getApproval, editApproval, rewriteApproval, approveApproval,
+  rejectApproval, createDraft, generateForContact, listContacts, unlockContactEmail,
+} from "../../lib/foundersApi";
 
 const SAMPLE_APPROVALS = [
   {
@@ -23,32 +29,55 @@ const SAMPLE_APPROVALS = [
 ];
 
 const POLL_INTERVAL = 30_000;
+const NO_REWRITE = { open: false, instruction: "", busy: false, suggestion: null, error: null };
 
 // The API identifies drafts by draft_id and names the contact context_name.
 function normalizeApproval(a) {
   return { ...a, id: a.draft_id ?? a.id, contact_name: a.context_name ?? a.contact_name };
 }
 
+function initials(name) {
+  return (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+}
+
+const FIELD = "w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-sm text-white placeholder-white/25 outline-none transition focus:border-white/25";
+const LABEL = "mb-1.5 block text-[10.5px] font-semibold uppercase tracking-wider text-white/35";
+
 export default function DraftsPage() {
-  const { email, demo, logout } = useAuth();
-  const [approvals, setApprovals]   = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const [acting, setActing]         = useState({});
-  const [toast, setToast]           = useState(null);
+  const { demo, logout } = useAuth();
+  const [approvals, setApprovals]       = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState(null);
+  const [usingSamples, setUsingSamples] = useState(false);
   const [entitlements, setEntitlements] = useState(null);
-  const [expanded, setExpanded]     = useState({});
-  const [details, setDetails]       = useState({});
+  const [toast, setToast]               = useState(null);
+  const [composeOpen, setComposeOpen]   = useState(false);
+
+  const [selectedId, setSelectedId] = useState(null);
+  const [detail, setDetail]         = useState(null); // { loading } | { error } | { data }
+  const [subject, setSubject]       = useState("");
+  const [editing, setEditing]       = useState(false);
+  const [editBody, setEditBody]     = useState("");
+  const [rewrite, setRewrite]       = useState(NO_REWRITE);
+  const [original, setOriginal]     = useState(null); // subject + body as first loaded, for "Restore original"
+  const [busy, setBusy]             = useState(null); // "save" | "approve" | "reject"
+
+  const loadedOnce = useRef(false);
+  const latestSelection = useRef(null);
+  const offline = demo || usingSamples;
 
   const load = useCallback(async () => {
     if (demo) { setApprovals(SAMPLE_APPROVALS); setLoading(false); return; }
     try {
       const data = await listApprovals();
       setApprovals((Array.isArray(data) ? data : data.approvals ?? []).map(normalizeApproval));
+      loadedOnce.current = true;
+      setUsingSamples(false);
       setError(null);
     } catch (err) {
       setError(err.message);
-      if (approvals.length === 0) setApprovals(SAMPLE_APPROVALS);
+      // Only fall back to samples if we never got a real list.
+      if (!loadedOnce.current) { setApprovals(SAMPLE_APPROVALS); setUsingSamples(true); }
     } finally {
       setLoading(false);
     }
@@ -61,55 +90,184 @@ export default function DraftsPage() {
     return () => clearInterval(interval);
   }, [load, demo]);
 
+  // After the session-expired dialog signs the user back in, refresh in place.
+  useEffect(() => {
+    function onReauthed(e) { e.preventDefault(); load(); }
+    window.addEventListener(REAUTHED_EVENT, onReauthed);
+    return () => window.removeEventListener(REAUTHED_EVENT, onReauthed);
+  }, [load]);
+
   useEffect(() => {
     if (demo) { setEntitlements({ planName: "Founder", status: "trial" }); return; }
     getEntitlements().then(setEntitlements).catch(() => setEntitlements(null));
   }, [demo]);
 
-  async function handleApprove(id) {
-    if (demo) { showToast("Sign in to approve drafts", "error"); return; }
-    setActing((a) => ({ ...a, [id]: "approving" }));
+  function showToast(message, type) {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 5000);
+  }
+
+  /** Blocks actions that need the real API while showing sample data. */
+  function requireLive(what) {
+    if (!offline) return true;
+    showToast(demo ? `Sign in to ${what}` : "Can't reach the server right now", "error");
+    return false;
+  }
+
+  function clearSelection() {
+    latestSelection.current = null;
+    setSelectedId(null);
+    setDetail(null);
+    setEditing(false);
+    setRewrite(NO_REWRITE);
+  }
+
+  async function selectDraft(id) {
+    latestSelection.current = id;
+    setSelectedId(id);
+    setEditing(false);
+    setRewrite(NO_REWRITE);
+
+    if (offline) {
+      const sample = approvals.find((a) => a.id === id);
+      setDetail({ data: { draft_id: id, subject: sample?.subject, body: sample?.body, version: 1, contact_email: null } });
+      setSubject(sample?.subject ?? "");
+      setOriginal({ subject: sample?.subject ?? "", body: sample?.body ?? "" });
+      return;
+    }
+    setDetail({ loading: true });
+    setOriginal(null);
     try {
-      await approveApproval(id);
-      setApprovals((prev) => prev.filter((a) => a.id !== id));
-      showToast("Draft approved and sent", "success");
+      const full = await getApproval(id);
+      if (latestSelection.current !== id) return;
+      setDetail({ data: full });
+      setSubject(full.subject ?? "");
+      setOriginal({ subject: full.subject ?? "", body: full.body ?? "" });
     } catch (err) {
-      showToast(err.message || "Failed to approve", "error");
-    } finally {
-      setActing((a) => ({ ...a, [id]: null }));
+      if (latestSelection.current === id) setDetail({ error: err.message || "Couldn't load this draft" });
     }
   }
 
-  async function handleReject(id) {
-    if (demo) { showToast("Sign in to reject drafts", "error"); return; }
-    setActing((a) => ({ ...a, [id]: "rejecting" }));
+  /** Saves the subject and body in place; the draft keeps its id and gets a new version. */
+  async function saveDraft(body) {
+    const res = await editApproval(selectedId, {
+      newBody: body,
+      newSubject: subject,
+      version: detail.data.version,
+    });
+    setDetail({ data: { ...detail.data, subject, body, version: res.version } });
+    setApprovals((prev) => prev.map((a) => (a.id === selectedId ? { ...a, subject } : a)));
+  }
+
+  function startEdit() {
+    if (!requireLive("edit drafts")) return;
+    setEditBody(detail.data.body ?? "");
+    setEditing(true);
+  }
+
+  /** Puts the text from when this draft was opened back into the editor (not saved until you save). */
+  function restoreOriginal() {
+    setEditBody(original.body);
+    setSubject(original.subject);
+    setEditing(true);
+  }
+
+  async function handleSaveEdit() {
+    if (!editBody.trim()) { showToast("The email body can't be empty", "error"); return; }
+    setBusy("save");
     try {
-      await rejectApproval(id);
+      await saveDraft(editBody);
+      setEditing(false);
+      showToast("Changes saved", "success");
+    } catch (err) {
+      showToast(err.message || "Failed to save", "error");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function toggleRewrite() {
+    if (!rewrite.open && !requireLive("use AI rewrite")) return;
+    setRewrite((r) => ({ ...r, open: !r.open }));
+  }
+
+  async function handleRewrite() {
+    setRewrite((r) => ({ ...r, busy: true, error: null, suggestion: null }));
+    try {
+      const res = await rewriteApproval(selectedId, rewrite.instruction.trim());
+      setRewrite((r) => ({ ...r, busy: false, suggestion: res.suggested_body }));
+    } catch (err) {
+      setRewrite((r) => ({ ...r, busy: false, error: err.message || "Rewrite failed" }));
+    }
+  }
+
+  function applySuggestion() {
+    setEditBody(rewrite.suggestion);
+    setEditing(true);
+    setRewrite(NO_REWRITE);
+  }
+
+  async function handleApprove() {
+    if (!requireLive("approve drafts")) return;
+    const d = detail.data;
+    setBusy("approve");
+    try {
+      if (!d.contact_email) {
+        const ok = window.confirm(
+          "This contact has no email address.\n\nTry to unlock it via Apollo and then send?"
+        );
+        if (!ok) return;
+        const unlocked = await unlockContactEmail(d.object_id);
+        if (!unlocked.unlocked) {
+          showToast(unlocked.message || "Email not available via Apollo. Add it in the Contacts tab.", "error");
+          return;
+        }
+      }
+      // A different subject was picked, so save it before approving.
+      const id = selectedId;
+      if (subject && subject !== d.subject) await saveDraft(d.body);
+
+      const res = await approveApproval(id);
       setApprovals((prev) => prev.filter((a) => a.id !== id));
+      clearSelection();
+      if (res.sent) showToast(`Approved and sent to ${res.sent_to}`, "success");
+      else showToast(`Approved, but not sent: ${res.send_error || "unknown reason"}`, "error");
+    } catch (err) {
+      showToast(err.message || "Failed to approve", "error");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleReject() {
+    if (!requireLive("reject drafts")) return;
+    setBusy("reject");
+    try {
+      await rejectApproval(selectedId);
+      setApprovals((prev) => prev.filter((a) => a.id !== selectedId));
+      clearSelection();
       showToast("Draft rejected", "success");
     } catch (err) {
       showToast(err.message || "Failed to reject", "error");
     } finally {
-      setActing((a) => ({ ...a, [id]: null }));
+      setBusy(null);
     }
   }
 
-  function showToast(message, type) {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+  async function handleComposeSaved(draftId) {
+    setComposeOpen(false);
+    await load();
+    selectDraft(draftId);
+    showToast("Draft saved", "success");
   }
 
-  function toggleExpand(id) {
-    setExpanded((e) => ({ ...e, [id]: !e[id] }));
-    // The list endpoint omits the body, so fetch it the first time a card is opened.
-    const needsFetch = !demo && !expanded[id] && !details[id]
-      && !approvals.find((a) => a.id === id)?.body;
-    if (!needsFetch) return;
-    setDetails((d) => ({ ...d, [id]: { loading: true } }));
-    getApproval(id)
-      .then((full) => setDetails((d) => ({ ...d, [id]: { body: full.body, contact_email: full.contact_email } })))
-      .catch((err) => setDetails((d) => ({ ...d, [id]: { error: err.message || "Failed to load draft" } })));
-  }
+  const selected = approvals.find((a) => a.id === selectedId);
+  const d = detail?.data;
+  const subjectOptions = d ? [...new Set([...(d.subject_line_options ?? []), d.subject].filter(Boolean))] : [];
+  const canRestore = !!original && !!d && (
+    editing ? editBody !== original.body || subject !== original.subject
+            : d.body !== original.body || d.subject !== original.subject
+  );
 
   return (
     <div className="flex min-h-screen bg-brand-bg font-body text-white">
@@ -117,7 +275,7 @@ export default function DraftsPage() {
 
       <main className="flex-1 px-5 py-8 sm:px-8 lg:px-10">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between gap-3">
           <div>
             <h1 className="font-display text-2xl font-extrabold text-white sm:text-3xl">Drafts</h1>
             <p className="mt-1 text-sm text-white/40">
@@ -125,21 +283,32 @@ export default function DraftsPage() {
               {demo && " · sample data"}
             </p>
           </div>
-          {!demo && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={load}
-              className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-white/50 transition hover:text-white"
+              onClick={() => { if (requireLive("compose emails")) setComposeOpen(true); }}
+              className="flex items-center gap-2 rounded-xl border border-sky-400/25 bg-sky-400/10 px-3 py-2 text-xs font-semibold text-sky-300 transition hover:bg-sky-400/20"
             >
-              <RefreshCw size={13} />
-              Refresh
+              <Plus size={13} />
+              Compose
             </button>
-          )}
+            {!demo && (
+              <button
+                onClick={load}
+                className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-white/50 transition hover:text-white"
+              >
+                <RefreshCw size={13} />
+                Refresh
+              </button>
+            )}
+          </div>
         </div>
 
         {error && (
           <div className="mb-5 flex items-start gap-2 rounded-xl border border-brand-gold/20 bg-brand-gold/5 px-4 py-3 text-sm text-brand-gold2">
             <AlertCircle size={15} className="mt-0.5 shrink-0" />
-            Couldn't reach founder-agents-api — showing sample drafts.
+            {usingSamples
+              ? "Couldn't reach founder-agents-api — showing sample drafts."
+              : `Couldn't refresh drafts: ${error}`}
           </div>
         )}
 
@@ -155,71 +324,464 @@ export default function DraftsPage() {
             <p className="text-sm text-white/30">No pending drafts — all caught up.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-4">
-            {approvals.map((a) => (
-              <div key={a.id} className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
-                {/* Card header */}
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-white">{a.subject}</p>
+          <div className="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
+            {/* List */}
+            <div className="flex flex-col gap-2">
+              {approvals.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => selectDraft(a.id)}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    a.id === selectedId
+                      ? "border-white/20 bg-white/[0.07]"
+                      : "border-white/5 bg-white/[0.03] hover:bg-white/[0.05]"
+                  }`}
+                >
+                  <p className="truncate text-sm font-semibold text-white">{a.contact_name || "Unknown contact"}</p>
+                  <p className="mt-0.5 truncate text-xs text-white/50">{a.subject || "No subject"}</p>
+                  <div className="mt-2 flex items-center gap-2 text-[10.5px] text-white/30">
+                    {a.company && <span>{a.company}</span>}
+                    {a.agent && <span className="rounded bg-white/5 px-1.5 py-0.5">{a.agent}</span>}
+                    {a.created_at && (
+                      <span className="ml-auto">
+                        {new Date(a.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Detail */}
+            <div className="min-w-0 rounded-2xl border border-white/5 bg-white/[0.03] p-5">
+              {!detail ? (
+                <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
+                  <Mail size={26} className="text-white/20" />
+                  <p className="text-sm text-white/30">Select a draft to review</p>
+                </div>
+              ) : detail.loading ? (
+                <div className="h-64 animate-pulse rounded-xl bg-white/[0.03]" />
+              ) : detail.error ? (
+                <div className="flex items-start gap-2 text-sm text-brand-rose">
+                  <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                  {detail.error}
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <p className="font-semibold text-white">{selected?.contact_name || "Draft"}</p>
                     <p className="mt-0.5 text-xs text-white/40">
-                      To: <span className="text-white/60">{a.contact_name}</span>
-                      {a.company && <span> · {a.company}</span>}
-                      {details[a.id]?.contact_email && <span> · {details[a.id].contact_email}</span>}
+                      {d.contact_email ? `To: ${d.contact_email}` : "To: no email on file"}
+                      {selected?.agent && ` · ${selected.agent} agent`}
+                      {` · v${d.version ?? 1}`}
                     </p>
                   </div>
-                  <button
-                    onClick={() => toggleExpand(a.id)}
-                    className="shrink-0 text-xs text-white/30 hover:text-white/60"
-                  >
-                    {expanded[a.id] ? "Hide" : "Preview"}
-                  </button>
-                </div>
 
-                {/* Body preview */}
-                {expanded[a.id] && (
-                  <pre className="mt-4 whitespace-pre-wrap rounded-xl border border-white/5 bg-black/20 p-4 font-body text-xs leading-relaxed text-white/60">
-                    {a.body
-                      ?? (details[a.id]?.loading ? "Loading…"
-                        : details[a.id]?.error ?? details[a.id]?.body)}
-                  </pre>
-                )}
+                  {!d.contact_email && !offline && (
+                    <div className="mb-4 flex items-start gap-2 rounded-xl border border-brand-gold/20 bg-brand-gold/5 px-4 py-3 text-xs text-brand-gold2">
+                      <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                      This contact has no email address. Approving will try to unlock it through Apollo first.
+                    </div>
+                  )}
 
-                {/* Actions */}
-                <div className="mt-4 flex items-center gap-3">
-                  <button
-                    onClick={() => handleApprove(a.id)}
-                    disabled={!!acting[a.id]}
-                    className="flex items-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <CheckCircle size={13} />
-                    {acting[a.id] === "approving" ? "Sending…" : "Approve & Send"}
-                  </button>
-                  <button
-                    onClick={() => handleReject(a.id)}
-                    disabled={!!acting[a.id]}
-                    className="flex items-center gap-1.5 rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-white/40 transition hover:border-white/20 hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <XCircle size={13} />
-                    {acting[a.id] === "rejecting" ? "Rejecting…" : "Reject"}
-                  </button>
-                </div>
-              </div>
-            ))}
+                  {/* Subject */}
+                  <label className={LABEL}>Subject</label>
+                  {editing ? (
+                    <input
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      className={`${FIELD} mb-4`}
+                    />
+                  ) : (
+                    <div className="mb-4 flex flex-wrap gap-2">
+                      {subjectOptions.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setSubject(s)}
+                          className={`rounded-lg border px-3 py-1.5 text-left text-xs transition ${
+                            s === subject
+                              ? "border-sky-400/40 bg-sky-400/10 text-sky-200"
+                              : "border-white/10 text-white/50 hover:text-white/80"
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Body */}
+                  <label className={LABEL}>Email body</label>
+                  {editing ? (
+                    <textarea
+                      value={editBody}
+                      onChange={(e) => setEditBody(e.target.value)}
+                      rows={14}
+                      className={`${FIELD} resize-y leading-relaxed`}
+                    />
+                  ) : (
+                    <pre className="whitespace-pre-wrap rounded-xl border border-white/5 bg-black/20 p-4 font-body text-sm leading-relaxed text-white/70">
+                      {d.body}
+                    </pre>
+                  )}
+
+                  {/* AI rewrite */}
+                  {rewrite.open && !editing && (
+                    <div className="mt-4 rounded-xl border border-violet-400/20 bg-violet-400/5 p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <input
+                          value={rewrite.instruction}
+                          onChange={(e) => setRewrite((r) => ({ ...r, instruction: e.target.value }))}
+                          onKeyDown={(e) => { if (e.key === "Enter" && !rewrite.busy) handleRewrite(); }}
+                          placeholder="Optional: 'make it shorter', 'more casual', 'focus on ROI'…"
+                          className={FIELD}
+                        />
+                        <button
+                          onClick={handleRewrite}
+                          disabled={rewrite.busy}
+                          className="shrink-0 rounded-xl border border-violet-400/30 bg-violet-400/15 px-4 py-2 text-xs font-semibold text-violet-200 transition hover:bg-violet-400/25 disabled:opacity-40"
+                        >
+                          {rewrite.busy ? "Writing…" : "Generate"}
+                        </button>
+                      </div>
+                      {rewrite.error && (
+                        <p className="mt-3 text-xs text-brand-rose">{rewrite.error}</p>
+                      )}
+                      {rewrite.suggestion && (
+                        <>
+                          <pre className="mt-3 whitespace-pre-wrap rounded-xl border border-white/5 bg-black/20 p-4 font-body text-sm leading-relaxed text-white/70">
+                            {rewrite.suggestion}
+                          </pre>
+                          <div className="mt-3 flex gap-2">
+                            <button
+                              onClick={applySuggestion}
+                              className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-400/20"
+                            >
+                              Use this
+                            </button>
+                            <button
+                              onClick={() => setRewrite((r) => ({ ...r, suggestion: null }))}
+                              className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/40 transition hover:text-white/70"
+                            >
+                              Discard
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                    {editing ? (
+                      <>
+                        <button
+                          onClick={handleSaveEdit}
+                          disabled={!!busy}
+                          className="flex items-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <CheckCircle size={13} />
+                          {busy === "save" ? "Saving…" : "Save changes"}
+                        </button>
+                        <button
+                          onClick={() => setEditing(false)}
+                          disabled={!!busy}
+                          className="rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-white/40 transition hover:text-white/70 disabled:opacity-40"
+                        >
+                          Cancel
+                        </button>
+                        {canRestore && (
+                          <button
+                            onClick={restoreOriginal}
+                            disabled={!!busy}
+                            className="text-xs text-white/35 underline transition hover:text-white/70 disabled:opacity-40"
+                          >
+                            Restore original
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleApprove}
+                          disabled={!!busy}
+                          className="flex items-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <CheckCircle size={13} />
+                          {busy === "approve" ? "Sending…" : "Approve & Send"}
+                        </button>
+                        <button
+                          onClick={startEdit}
+                          disabled={!!busy}
+                          className="flex items-center gap-1.5 rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-white/60 transition hover:text-white disabled:opacity-40"
+                        >
+                          <Pencil size={13} />
+                          Edit
+                        </button>
+                        <button
+                          onClick={toggleRewrite}
+                          disabled={!!busy}
+                          className="flex items-center gap-1.5 rounded-lg border border-violet-400/25 bg-violet-400/10 px-4 py-2 text-xs font-semibold text-violet-300 transition hover:bg-violet-400/20 disabled:opacity-40"
+                        >
+                          <Sparkles size={13} />
+                          Rewrite with AI
+                        </button>
+                        <button
+                          onClick={handleReject}
+                          disabled={!!busy}
+                          className="flex items-center gap-1.5 rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-white/40 transition hover:border-white/20 hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <XCircle size={13} />
+                          {busy === "reject" ? "Rejecting…" : "Reject"}
+                        </button>
+                        {canRestore && (
+                          <button
+                            onClick={restoreOriginal}
+                            disabled={!!busy}
+                            className="text-xs text-white/35 underline transition hover:text-white/70 disabled:opacity-40"
+                          >
+                            Restore original
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
       </main>
 
+      {composeOpen && (
+        <ComposeModal onClose={() => setComposeOpen(false)} onSaved={handleComposeSaved} />
+      )}
+
       {toast && (
-        <div className={`fixed bottom-6 right-6 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium shadow-xl ${
+        <div className={`fixed bottom-6 right-6 z-[60] flex max-w-sm items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium shadow-xl ${
           toast.type === "success"
             ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
             : "border-brand-rose/25 bg-brand-rose/10 text-brand-rose"
         }`}>
-          {toast.type === "success" ? <CheckCircle size={15} /> : <AlertCircle size={15} />}
+          {toast.type === "success" ? <CheckCircle size={15} className="shrink-0" /> : <AlertCircle size={15} className="shrink-0" />}
           {toast.message}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Write a new email: pick a contact, then type it or have the AI write it. */
+function ComposeModal({ onClose, onSaved }) {
+  const [query, setQuery]           = useState("");
+  const [results, setResults]       = useState(null); // null = no search yet
+  const [contact, setContact]       = useState(null);
+  const [subject, setSubject]       = useState("");
+  const [body, setBody]             = useState("");
+  const [instruction, setInstruction] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [saving, setSaving]         = useState(false);
+  const [status, setStatus]         = useState(null); // { message, type }
+
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (contact || q.length < 2) { setResults(null); return undefined; }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const data = await listContacts({ limit: 20, search: q });
+        const list = Array.isArray(data) ? data : data.contacts ?? [];
+        if (!cancelled) setResults(list.filter((c) => c.email));
+      } catch (err) {
+        if (!cancelled) setStatus({ message: err.message, type: "error" });
+      }
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [query, contact]);
+
+  function pickContact(c) {
+    setContact(c);
+    setQuery("");
+    setResults(null);
+    setStatus(null);
+  }
+
+  async function handleGenerate() {
+    if (!contact) { setStatus({ message: "Select a recipient first.", type: "error" }); return; }
+    setGenerating(true);
+    setStatus(null);
+    try {
+      const res = await generateForContact(contact.id, instruction.trim());
+      setSubject(res.subject || "");
+      setBody(res.body || "");
+      setStatus({ message: "Email generated. Review it, then save.", type: "success" });
+    } catch (err) {
+      setStatus({ message: err.message || "Generation failed", type: "error" });
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleSave() {
+    if (!contact) { setStatus({ message: "Select a recipient first.", type: "error" }); return; }
+    if (!subject.trim() || !body.trim()) {
+      setStatus({ message: "Subject and body are required.", type: "error" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await createDraft({ contactId: contact.id, subject: subject.trim(), body: body.trim() });
+      onSaved(res.draft_id);
+    } catch (err) {
+      setStatus({ message: err.message || "Failed to save draft", type: "error" });
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="compose-title"
+        className="flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-brand-bg shadow-2xl"
+      >
+        <div className="flex items-center gap-3 border-b border-white/10 px-6 py-4">
+          <Mail size={16} className="text-white/50" />
+          <h2 id="compose-title" className="flex-1 text-sm font-semibold">Compose email</h2>
+          <button onClick={onClose} aria-label="Close" className="text-white/30 transition hover:text-white/70">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-4 overflow-y-auto px-6 py-5">
+          {/* To */}
+          <div>
+            <label className={LABEL}>To</label>
+            {contact ? (
+              <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/20 text-[11px] font-bold text-sky-300">
+                  {initials(contact.name)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{contact.name}</p>
+                  <p className="truncate text-xs text-white/40">{contact.email}</p>
+                </div>
+                <button
+                  onClick={() => setContact(null)}
+                  aria-label="Change recipient"
+                  className="text-white/30 transition hover:text-white/70"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search contacts by name…"
+                  autoFocus
+                  className={FIELD}
+                />
+                {results && (
+                  <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-56 overflow-y-auto rounded-xl border border-white/10 bg-brand-bg shadow-xl">
+                    {results.length === 0 ? (
+                      <p className="px-3.5 py-3 text-xs text-white/40">No contacts with an email address found</p>
+                    ) : (
+                      results.map((c) => (
+                        <button
+                          key={c.id}
+                          onClick={() => pickContact(c)}
+                          className="flex w-full items-center gap-3 border-b border-white/5 px-3.5 py-2.5 text-left last:border-b-0 hover:bg-white/[0.05]"
+                        >
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/15 text-[11px] font-bold text-sky-300">
+                            {initials(c.name)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold">{c.name || "—"}</p>
+                            <p className="truncate text-xs text-white/40">{c.email}</p>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Subject */}
+          <div>
+            <label className={LABEL}>Subject</label>
+            <input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Email subject line…"
+              className={FIELD}
+            />
+          </div>
+
+          {/* AI */}
+          <div className="flex flex-col gap-2 rounded-xl border border-violet-400/20 bg-violet-400/5 p-3 sm:flex-row sm:items-center">
+            <input
+              value={instruction}
+              onChange={(e) => setInstruction(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !generating) handleGenerate(); }}
+              placeholder="Optional: e.g. 'focus on ROI', 'keep it under 5 sentences'…"
+              className={FIELD}
+            />
+            <button
+              onClick={handleGenerate}
+              disabled={generating}
+              className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-violet-400/30 bg-violet-400/15 px-4 py-2.5 text-xs font-semibold text-violet-200 transition hover:bg-violet-400/25 disabled:opacity-40"
+            >
+              <Sparkles size={13} />
+              {generating ? "Generating…" : "Generate with AI"}
+            </button>
+          </div>
+
+          {/* Body */}
+          <div>
+            <label className={LABEL}>Body</label>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={10}
+              placeholder="Write your email here, or click Generate with AI above…"
+              className={`${FIELD} resize-y leading-relaxed`}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 border-t border-white/10 px-6 py-4">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-400/20 disabled:opacity-40"
+          >
+            {saving ? "Saving…" : "Save draft"}
+          </button>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-white/50 transition hover:text-white/80 disabled:opacity-40"
+          >
+            Discard
+          </button>
+          {status && (
+            <span className={`text-xs ${status.type === "success" ? "text-emerald-300" : "text-brand-rose"}`}>
+              {status.message}
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

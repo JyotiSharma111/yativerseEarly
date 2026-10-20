@@ -32,6 +32,23 @@ async function parseJson(res) {
   }
 }
 
+export const AUTH_EXPIRED_EVENT = 'founders:auth-expired'
+
+function signalAuthExpired() {
+  window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT))
+}
+
+/** True when there is no token, or its exp claim has passed. Unreadable tokens count as valid. */
+function isTokenExpired(token) {
+  if (!token) return true
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return typeof payload.exp === 'number' && payload.exp * 1000 <= Date.now()
+  } catch {
+    return false
+  }
+}
+
 async function apiFetch(path, options = {}) {
   // Firebase users send their Firebase ID token (founder-agents-api verifies it
   // and checks access with yati-api). People still on the old password login
@@ -45,9 +62,27 @@ async function apiFetch(path, options = {}) {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   }
-  const res = await fetch(`${FOUNDERS_API_BASE}${path}`, { ...options, headers })
+  let res
+  try {
+    res = await fetch(`${FOUNDERS_API_BASE}${path}`, { ...options, headers })
+  } catch (err) {
+    // The API's 401 responses carry no CORS headers, so the browser hides them
+    // and fetch throws instead. An expired token is the usual cause.
+    if (isTokenExpired(token)) {
+      signalAuthExpired()
+      const expired = new Error('Your session expired. Please sign in again.')
+      expired.status = 401
+      throw expired
+    }
+    throw err
+  }
   const data = await parseJson(res)
-  if (!res.ok) throw new Error(data.detail || data.error || 'Request failed')
+  if (res.status === 401) signalAuthExpired()
+  if (!res.ok) {
+    const failure = new Error(data.detail || data.error || 'Request failed')
+    failure.status = res.status
+    throw failure
+  }
   return data
 }
 
@@ -97,12 +132,51 @@ export async function getApproval(draftId) {
   return apiFetch(`/api/v1/approvals/${draftId}`)
 }
 
+/** Saves an edit as a new revision. `version` must match the draft's current version. */
+export async function editApproval(draftId, { newBody, newSubject, version }) {
+  return apiFetch(`/api/v1/approvals/${draftId}/edit`, {
+    method: 'POST',
+    body: JSON.stringify({ new_body: newBody, new_subject: newSubject, version }),
+  })
+}
+
+/** Asks the AI for a rewrite. Returns { suggested_body } and saves nothing. */
+export async function rewriteApproval(draftId, instruction = '') {
+  return apiFetch(`/api/v1/approvals/${draftId}/rewrite`, {
+    method: 'POST',
+    body: JSON.stringify({ instruction }),
+  })
+}
+
+export async function createDraft({ contactId, subject, body }) {
+  return apiFetch('/api/v1/approvals/create', {
+    method: 'POST',
+    body: JSON.stringify({ contact_id: contactId, subject, body }),
+  })
+}
+
+/** AI-written subject + body for a contact. Returns { subject, body } and saves nothing. */
+export async function generateForContact(contactId, instruction = '') {
+  return apiFetch('/api/v1/approvals/generate-for-contact', {
+    method: 'POST',
+    body: JSON.stringify({ contact_id: contactId, instruction }),
+  })
+}
+
+export async function unlockContactEmail(contactId) {
+  return apiFetch(`/api/v1/contacts/${contactId}/unlock-email`, { method: 'POST' })
+}
+
 export async function approveApproval(approvalId) {
   return apiFetch(`/api/v1/approvals/${approvalId}/approve`, { method: 'POST' })
 }
 
-export async function rejectApproval(approvalId) {
-  return apiFetch(`/api/v1/approvals/${approvalId}/reject`, { method: 'POST' })
+/** The API requires `notes` on reject. */
+export async function rejectApproval(approvalId, notes = 'Rejected from dashboard') {
+  return apiFetch(`/api/v1/approvals/${approvalId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ notes }),
+  })
 }
 
 // ---------------------------------------------------------------------------

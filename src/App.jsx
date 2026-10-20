@@ -27,6 +27,7 @@ import { AuthProvider, RequireAuth, RequireFounderOS } from './lib/auth'
 import { ChatProvider } from './lib/chatContext'
 import { CartProvider } from './lib/cart'
 import CartDrawer from './components/CartDrawer'
+import SessionExpiredDialog from './components/SessionExpiredDialog'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -124,6 +125,7 @@ export default function App() {
           />
         </Routes>
         <CartDrawer />
+        <SessionExpiredDialog />
       </CartProvider>
       </ChatProvider>
     </AuthProvider>
