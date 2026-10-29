@@ -19,6 +19,13 @@ import {
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
   signInWithEmailLink,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
   onIdTokenChanged,
   signOut,
 } from 'firebase/auth'
@@ -72,10 +79,84 @@ export function watchFirebaseSession(onChange) {
   })
 }
 
-export async function signInWithGoogle() {
+/**
+ * "Remember me on this device". Checked: Firebase keeps the person signed in
+ * across browser restarts. Unchecked: Firebase forgets them when the tab
+ * closes, and we mark our own copy of the session to be dropped too
+ * (see enforceSessionOnly in api.js).
+ */
+async function applyRemember(remember) {
+  await setPersistence(getFirebaseAuth(), remember ? browserLocalPersistence : browserSessionPersistence)
+}
+function markRemember(remember) {
+  if (remember) {
+    localStorage.removeItem('yati_session_only')
+    sessionStorage.removeItem('yati_session_alive')
+  } else {
+    localStorage.setItem('yati_session_only', '1')
+    sessionStorage.setItem('yati_session_alive', '1')
+  }
+}
+
+export async function signInWithGoogle(remember = true) {
+  await applyRemember(remember)
   const result = await signInWithPopup(getFirebaseAuth(), new GoogleAuthProvider())
   await persist(result.user)
+  markRemember(remember)
   return result.user.email
+}
+
+const VERIFY_SETTINGS = () => ({ url: `${window.location.origin}/login` })
+
+/**
+ * Email + password sign-in. Returns { verified, email }.
+ * An account whose email hasn't been confirmed yet is NOT given a session:
+ * the servers reject its token anyway, so we send the person to the
+ * "check your inbox" step instead of letting them into a broken dashboard.
+ */
+export async function passwordSignIn(email, password, remember = true) {
+  await applyRemember(remember)
+  const cred = await signInWithEmailAndPassword(getFirebaseAuth(), email.trim().toLowerCase(), password)
+  if (!cred.user.emailVerified) return { verified: false, email: cred.user.email }
+  await persist(cred.user)
+  markRemember(remember)
+  return { verified: true, email: cred.user.email }
+}
+
+/** Creates the account and emails a confirmation link. */
+export async function passwordSignUp(email, password, remember = true) {
+  await applyRemember(remember)
+  const cred = await createUserWithEmailAndPassword(getFirebaseAuth(), email.trim().toLowerCase(), password)
+  await sendEmailVerification(cred.user, VERIFY_SETTINGS())
+  markRemember(remember)
+  return { email: cred.user.email }
+}
+
+export async function resendVerification() {
+  const user = getFirebaseAuth().currentUser
+  if (!user) throw Object.assign(new Error('Please sign in again.'), { code: 'auth/no-current-user' })
+  await sendEmailVerification(user, VERIFY_SETTINGS())
+}
+
+/** "I've verified my email": re-check with Firebase and, if so, finish signing in. */
+export async function checkVerified() {
+  const user = getFirebaseAuth().currentUser
+  if (!user) return null
+  await user.reload()
+  if (!user.emailVerified) return false
+  await user.getIdToken(true) // force a new token that carries email_verified = true
+  await persist(user)
+  return user.email
+}
+
+/** Always succeeds from the caller's view, so it can't be used to find out who has an account. */
+export async function sendReset(email) {
+  try {
+    await sendPasswordResetEmail(getFirebaseAuth(), email.trim().toLowerCase(), VERIFY_SETTINGS())
+  } catch (err) {
+    if (err && (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-email')) return
+    throw err
+  }
 }
 
 /** Emails a one-tap sign-in link. Opening it lands back on /login. */
@@ -119,6 +200,17 @@ export function friendlyAuthError(err) {
       return null // they just closed the window; nothing to report
     case 'auth/popup-blocked':
       return 'Your browser blocked the Google window. Allow pop-ups for this site, or use the email link instead.'
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+    case 'auth/invalid-login-credentials':
+      return 'Incorrect email or password.'
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists. Sign in instead, or choose \u201cForgot your password?\u201d. If you signed up with Google, use Continue with Google.'
+    case 'auth/weak-password':
+      return 'Choose a stronger password (at least 8 characters).'
+    case 'auth/user-disabled':
+      return 'This account has been disabled. Please contact support@yativerse.ai.'
     case 'auth/invalid-email':
       return 'That email address doesn\u2019t look right.'
     case 'auth/too-many-requests':

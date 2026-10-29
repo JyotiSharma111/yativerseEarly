@@ -1,8 +1,11 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { isAuthenticated, getStoredEmail, clearSession } from "./api";
+import { isAuthenticated, getStoredEmail, clearSession, enforceSessionOnly } from "./api";
 import { clearFoundersToken } from "./foundersApi";
 import { clearEntitlementsCache, useEntitlements } from "./useEntitlements";
+
+// Runs once when the app loads, before anything reads the stored login.
+enforceSessionOnly();
 
 const DEMO_KEY = "yati_demo_mode";
 
