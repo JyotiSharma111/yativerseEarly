@@ -10,6 +10,7 @@ import {
   Settings,
   Lock,
   LogOut,
+  Mic,
 } from "lucide-react";
 import { useEntitlements } from "../../lib/useEntitlements";
 
@@ -17,6 +18,7 @@ const LIVE_ITEMS = [
   { icon: LayoutGrid,  label: "Overview",  to: "/dashboard" },
   { icon: Footprints,  label: "Ring" },
   { icon: CreditCard,  label: "Plan",      to: "/dashboard/plan" },
+  { icon: Mic,         label: "Meetings",  to: "/dashboard/meetings" },
   { icon: Bot,         label: "AI Agents", to: "/dashboard/agents",   founderOS: true },
   { icon: Users,       label: "Contacts",  to: "/dashboard/contacts", founderOS: true },
   { icon: Mail,        label: "Drafts",    to: "/dashboard/drafts",   founderOS: true },

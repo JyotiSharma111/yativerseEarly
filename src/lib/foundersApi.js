@@ -275,6 +275,27 @@ export async function scrapeProductUrl(url) {
 }
 
 // ---------------------------------------------------------------------------
+// Meetings (recorder pen) — open to every signed-in user, no Founder OS needed
+// ---------------------------------------------------------------------------
+
+export async function listMeetings() {
+  return apiFetch('/api/v1/meetings')
+}
+
+/** Summary, transcript and a 1-hour audio_url (null once the audio is deleted). */
+export async function getMeeting(meetingId) {
+  return apiFetch(`/api/v1/meetings/${meetingId}`)
+}
+
+export async function retryMeeting(meetingId) {
+  return apiFetch(`/api/v1/meetings/${meetingId}/retry`, { method: 'POST' })
+}
+
+export async function deleteMeeting(meetingId) {
+  return apiFetch(`/api/v1/meetings/${meetingId}`, { method: 'DELETE' })
+}
+
+// ---------------------------------------------------------------------------
 // Settings — SMTP
 // ---------------------------------------------------------------------------
 
