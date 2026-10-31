@@ -22,6 +22,7 @@ import AgentsPage from './pages/dashboard/AgentsPage'
 import ContactsPage from './pages/dashboard/ContactsPage'
 import DraftsPage from './pages/dashboard/DraftsPage'
 import DealsPage from './pages/dashboard/DealsPage'
+import MeetingsPage from './pages/dashboard/MeetingsPage'
 import SettingsPage from './pages/dashboard/SettingsPage'
 import { AuthProvider, RequireAuth, RequireFounderOS } from './lib/auth'
 import { ChatProvider } from './lib/chatContext'
@@ -112,6 +113,15 @@ export default function App() {
                 <RequireFounderOS>
                   <DealsPage />
                 </RequireFounderOS>
+              </RequireAuth>
+            }
+          />
+          {/* Recorder-pen meetings: every signed-in user, no Founder OS needed */}
+          <Route
+            path="/dashboard/meetings"
+            element={
+              <RequireAuth>
+                <MeetingsPage />
               </RequireAuth>
             }
           />
