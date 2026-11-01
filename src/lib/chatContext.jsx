@@ -41,7 +41,7 @@ const DEMO_MESSAGES = {
 const ChatContext = createContext(null)
 
 export function ChatProvider({ children }) {
-  const { demo } = useAuth()
+  const { demo, authenticated } = useAuth()
 
   const [sessions, setSessions]               = useState([])
   const [sessionsLoading, setSessionsLoading] = useState(true)
@@ -66,6 +66,13 @@ export function ChatProvider({ children }) {
       setSessionsLoading(false)
       return
     }
+    // Visitors who aren't signed in have no chat history to load. Without this
+    // guard the call failed on every public page and opened the "session
+    // expired" dialog for people who never had a session.
+    if (!authenticated) {
+      setSessionsLoading(false)
+      return
+    }
     listSessions()
       .then((data) => {
         const list = data.sessions ?? []
@@ -74,7 +81,7 @@ export function ChatProvider({ children }) {
         else setSessionsLoading(false)
       })
       .catch(() => setSessionsLoading(false))
-  }, [demo]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [demo, authenticated]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── SSE state machine → update messages / save on completion ──────────────
   useEffect(() => {
