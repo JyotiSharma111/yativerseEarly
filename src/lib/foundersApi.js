@@ -289,6 +289,19 @@ export async function getMeeting(meetingId) {
   return apiFetch(`/api/v1/meetings/${meetingId}`)
 }
 
+/** Meetings that contain `query` (2 to 100 characters), each with `match`: {field, text, start?, speaker?}. */
+export async function searchMeetings(query) {
+  return apiFetch(`/api/v1/meetings?q=${encodeURIComponent(query)}`)
+}
+
+/** Names speakers in one meeting ({label: name}; empty = default). Returns {speaker_names}. */
+export async function nameSpeakers(meetingId, names) {
+  return apiFetch(`/api/v1/meetings/${meetingId}/speakers`, {
+    method: 'PUT',
+    body: JSON.stringify({ names }),
+  })
+}
+
 export async function retryMeeting(meetingId) {
   return apiFetch(`/api/v1/meetings/${meetingId}/retry`, { method: 'POST' })
 }

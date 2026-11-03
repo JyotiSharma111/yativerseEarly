@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Mic, AlertCircle, RefreshCw, Trash2, RotateCcw, Loader2, CheckSquare, Lightbulb,
-  HelpCircle, Quote, Users, ListChecks,
+  HelpCircle, Quote, Users, ListChecks, Search, X, Pencil,
 } from "lucide-react";
 import Sidebar from "../../components/dashboard/Sidebar";
 import { REAUTHED_EVENT } from "../../components/SessionExpiredDialog";
 import { useAuth } from "../../lib/auth";
 import { getEntitlements } from "../../lib/api";
-import { listMeetings, getMeeting, retryMeeting, deleteMeeting } from "../../lib/foundersApi";
+import { listMeetings, getMeeting, retryMeeting, deleteMeeting, searchMeetings, nameSpeakers } from "../../lib/foundersApi";
 
 const SAMPLE_MEETINGS = [
   {
@@ -65,6 +65,47 @@ function clock(seconds) {
   return h ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}` : `${m}:${String(sec).padStart(2, "0")}`;
 }
 
+/** label -> display name: the server's names, else the summary's, else "Speaker N". */
+function speakerNames(d) {
+  if (d?.speaker_names && Object.keys(d.speaker_names).length) return d.speaker_names;
+  const names = {};
+  for (const t of d?.transcript ?? []) if (t.speaker) names[t.speaker] ??= null;
+  for (const sp of d?.summary?.speakers ?? []) if (sp.label) names[sp.label] = sp.name ?? names[sp.label] ?? null;
+  for (const label of Object.keys(names)) names[label] ??= label.replace(/^(?:c\d+\.)?speaker_(\d+)$/, "Speaker $1");
+  return names;
+}
+
+const MATCH_FIELD = {
+  title: "Title", speaker: "Speaker", summary: "Summary", action_item: "Action item", decision: "Decision",
+  key_point: "Key point", open_question: "Open question", highlight: "Highlight", transcript: "Transcript",
+};
+
+/** Search for sample meetings (demo mode), shaped like the API's results. */
+function searchSamples(query) {
+  const q = query.toLowerCase();
+  return SAMPLE_MEETINGS.flatMap((m) => {
+    const names = speakerNames(m);
+    if (m.title.toLowerCase().includes(q)) return [{ ...m, match: { field: "title", text: m.title } }];
+    const t = m.transcript.find((line) => line.text.toLowerCase().includes(q));
+    if (t) return [{ ...m, match: { field: "transcript", text: t.text, start: t.start, speaker: names[t.speaker] } }];
+    if (m.summary.summary.toLowerCase().includes(q)) return [{ ...m, match: { field: "summary", text: m.summary.summary } }];
+    return [];
+  });
+}
+
+/** `text` with the first case-insensitive `query` in bold. */
+function Highlighted({ text, query }) {
+  const at = query ? text.toLowerCase().indexOf(query.toLowerCase()) : -1;
+  if (at < 0) return text;
+  return (
+    <>
+      {text.slice(0, at)}
+      <strong className="font-semibold text-white">{text.slice(at, at + query.length)}</strong>
+      {text.slice(at + query.length)}
+    </>
+  );
+}
+
 function when(iso) {
   if (!iso) return "";
   return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -115,7 +156,10 @@ export default function MeetingsPage() {
   const [selectedId, setSelectedId]     = useState(null);
   const [detail, setDetail]             = useState(null); // { loading } | { error } | { data }
   const [showTranscript, setShowTranscript] = useState(false);
-  const [busy, setBusy]                 = useState(null);  // "retry" | "delete"
+  const [busy, setBusy]                 = useState(null);  // "retry" | "delete" | "speakers"
+  const [query, setQuery]               = useState("");
+  const [search, setSearch]             = useState(null);  // null | { loading } | { error } | { results }
+  const [renaming, setRenaming]         = useState(null);  // null | { label: name }
 
   const loadedOnce = useRef(false);
   const latestSelection = useRef(null);
@@ -141,7 +185,7 @@ export default function MeetingsPage() {
   const selectMeeting = useCallback(async (id, { quiet = false } = {}) => {
     latestSelection.current = id;
     setSelectedId(id);
-    if (!quiet) { setDetail({ loading: true }); setShowTranscript(false); }
+    if (!quiet) { setDetail({ loading: true }); setShowTranscript(false); setRenaming(null); }
     const sample = SAMPLE_MEETINGS.find((m) => m.id === id);
     if (offline && sample) { setDetail({ data: sample }); return; }
     try {
@@ -168,6 +212,50 @@ export default function MeetingsPage() {
       selectMeeting(selectedId, { quiet: true });
     }
   }, [selectedId, selectedStatus, detail, selectMeeting]);
+
+  // Search 300 ms after typing stops; under 2 characters shows the full list.
+  const q = query.trim();
+  useEffect(() => {
+    if (q.length < 2) { setSearch(null); return; }
+    let live = true;
+    const timer = setTimeout(async () => {
+      if (offline) { setSearch({ results: searchSamples(q) }); return; }
+      setSearch((prev) => ({ ...prev, loading: true }));
+      try {
+        const data = await searchMeetings(q);
+        if (live) setSearch({ results: data.meetings ?? [] });
+      } catch (err) {
+        if (live) setSearch({ error: err.message });
+      }
+    }, 300);
+    return () => { live = false; clearTimeout(timer); };
+  }, [q, offline]);
+
+  async function saveSpeakers() {
+    const d = detail?.data;
+    const current = speakerNames(d);
+    const changed = Object.fromEntries(
+      Object.entries(renaming).map(([l, n]) => [l, n.trim()]).filter(([l, n]) => n !== current[l]),
+    );
+    if (!Object.keys(changed).length) { setRenaming(null); return; }
+    if (offline) {
+      const names = { ...current };
+      for (const [l, n] of Object.entries(changed)) names[l] = n || l.replace(/^(?:c\d+\.)?speaker_(\d+)$/, "Speaker $1");
+      setDetail({ data: { ...d, speaker_names: names } });
+      setRenaming(null);
+      return;
+    }
+    setBusy("speakers");
+    try {
+      const res = await nameSpeakers(d.id, changed);
+      setDetail({ data: { ...d, speaker_names: res.speaker_names } });
+      setRenaming(null);
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   useEffect(() => {
     function onReauthed(e) { e.preventDefault(); load(); }
@@ -227,6 +315,10 @@ export default function MeetingsPage() {
 
   const d = detail?.data;
   const s = d?.summary;
+  const names = speakerNames(d);
+  const who = (label) => names[label] ?? label;
+  const searching = q.length >= 2;
+  const shown = searching ? (search?.results ?? []) : meetings;
 
   return (
     <div className="flex min-h-screen bg-brand-bg font-body text-white">
@@ -274,10 +366,40 @@ export default function MeetingsPage() {
             </p>
           </div>
         ) : (
+          <>
+          <div className="relative mb-4">
+            <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/35" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search meetings, people and transcripts"
+              className="w-full rounded-xl border border-white/5 bg-white/[0.03] py-2.5 pl-10 pr-10 text-sm text-white placeholder:text-white/35 focus:border-white/20 focus:outline-none"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                title="Clear"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition hover:text-white"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
           <div className="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
             {/* List */}
             <div className="flex flex-col gap-2">
-              {meetings.map((m) => (
+              {searching && search?.error && (
+                <p className="rounded-2xl border border-white/5 bg-white/[0.03] p-4 text-sm text-rose-300">{search.error}</p>
+              )}
+              {searching && search?.results && shown.length === 0 && (
+                <p className="rounded-2xl border border-white/5 bg-white/[0.03] p-4 text-sm text-white/40">
+                  No meetings mention “{q}”.
+                </p>
+              )}
+              {searching && !search?.results && !search?.error && (
+                <div className="flex items-center gap-2 p-4 text-sm text-white/40"><Loader2 size={14} className="animate-spin" /> Searching…</div>
+              )}
+              {shown.map((m) => (
                 <button
                   key={m.id}
                   onClick={() => selectMeeting(m.id)}
@@ -294,6 +416,17 @@ export default function MeetingsPage() {
                     {m.duration_seconds ? ` · ${clock(m.duration_seconds)}` : ""}
                     {m.kind ? ` · ${m.kind.replace("_", " ")}` : ""}
                   </p>
+                  {m.match && m.match.field !== "title" && (
+                    <div className="mt-2">
+                      <p className="text-[10.5px] font-semibold uppercase tracking-wide text-white/35">
+                        {[MATCH_FIELD[m.match.field] ?? m.match.field, m.match.speaker, m.match.start != null ? clock(m.match.start) : null]
+                          .filter(Boolean).join(" · ")}
+                      </p>
+                      <p className="mt-0.5 line-clamp-3 text-[12.5px] leading-snug text-white/60">
+                        <Highlighted text={m.match.text} query={q} />
+                      </p>
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
@@ -368,7 +501,7 @@ export default function MeetingsPage() {
                                   {a.task}
                                   {(a.owner || a.due) && (
                                     <span className="text-white/40">
-                                      {a.owner ? ` · ${a.owner}` : ""}{a.due ? ` · due ${a.due}` : ""}
+                                      {a.owner ? ` · ${who(a.owner)}` : ""}{a.due ? ` · due ${a.due}` : ""}
                                     </span>
                                   )}
                                 </span>
@@ -429,11 +562,56 @@ export default function MeetingsPage() {
                         </Section>
                       )}
 
-                      {s.speakers?.length > 0 && (
+                      {Object.keys(names).length > 0 && (
                         <Section icon={Users} title="Speakers">
-                          <p className="text-sm text-white/60">
-                            {s.speakers.map((sp) => `${sp.name || sp.label} (${sp.role})`).join(" · ")}
-                          </p>
+                          {renaming ? (
+                            <div className="flex flex-col gap-3">
+                              {Object.keys(names).map((label) => {
+                                const first = d.transcript?.find((t) => t.speaker === label)?.text;
+                                return (
+                                  <label key={label} className="block">
+                                    <input
+                                      value={renaming[label] ?? ""}
+                                      maxLength={60}
+                                      onChange={(e) => setRenaming((r) => ({ ...r, [label]: e.target.value }))}
+                                      className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white focus:border-white/25 focus:outline-none"
+                                    />
+                                    {first && <span className="mt-1 block truncate text-xs text-white/35">First said: “{first}”</span>}
+                                  </label>
+                                );
+                              })}
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={saveSpeakers}
+                                  disabled={busy === "speakers"}
+                                  className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/15 disabled:opacity-40"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setRenaming(null)}
+                                  className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/60 transition hover:text-white"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="text-sm text-white/60">
+                                {Object.keys(names).map((label) => {
+                                  const role = s.speakers?.find((sp) => sp.label === label)?.role;
+                                  return role ? `${who(label)} (${role})` : who(label);
+                                }).join(" · ")}
+                              </p>
+                              <button
+                                onClick={() => setRenaming({ ...names })}
+                                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1 text-xs text-white/60 transition hover:text-white"
+                              >
+                                <Pencil size={11} /> Rename
+                              </button>
+                            </div>
+                          )}
                         </Section>
                       )}
                     </>
@@ -453,7 +631,7 @@ export default function MeetingsPage() {
                             <li key={i} className="flex items-start gap-3 text-sm">
                               <Timestamp seconds={t.start} onSeek={seek} />
                               <span className="text-white/75">
-                                {t.speaker && <span className="mr-1.5 text-xs font-semibold text-white/35">{t.speaker}</span>}
+                                {t.speaker && <span className="mr-1.5 text-xs font-semibold text-white/35">{who(t.speaker)}</span>}
                                 {t.text}
                               </span>
                             </li>
@@ -466,6 +644,7 @@ export default function MeetingsPage() {
               )}
             </div>
           </div>
+          </>
         )}
 
         {toast && (
