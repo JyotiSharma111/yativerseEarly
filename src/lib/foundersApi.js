@@ -68,7 +68,9 @@ async function apiFetch(path, options = {}) {
   } catch (err) {
     // The API's 401 responses carry no CORS headers, so the browser hides them
     // and fetch throws instead. An expired token is the usual cause.
-    if (isTokenExpired(token)) {
+    // Only when there WAS a token and it ran out. A visitor who was never
+    // signed in must not get a "session expired" pop-up.
+    if (token && isTokenExpired(token)) {
       signalAuthExpired()
       const expired = new Error('Your session expired. Please sign in again.')
       expired.status = 401
@@ -77,7 +79,7 @@ async function apiFetch(path, options = {}) {
     throw err
   }
   const data = await parseJson(res)
-  if (res.status === 401) signalAuthExpired()
+  if (res.status === 401 && token) signalAuthExpired()
   if (!res.ok) {
     const failure = new Error(data.detail || data.error || 'Request failed')
     failure.status = res.status
