@@ -2,27 +2,14 @@
  * API client for founder-agents-api (Render).
  * Mirrors the shape of api.js but points at the founder-agents backend.
  *
- * Auth: uses founders_token from localStorage (set by loginFoundersOS in api.js).
- * Swapped for Firebase ID token when Firebase migration lands — only this file changes.
+ * Auth: every request carries the signed-in person's Firebase ID token.
+ * founder-agents-api verifies it and asks yati-api whether the plan includes
+ * the agents. There is no separate login for this service.
  */
 
 const FOUNDERS_API_BASE =
   import.meta.env.VITE_FOUNDERS_API_BASE ||
   'https://founder-agents-api.onrender.com'
-
-const FOUNDERS_TOKEN_KEY = 'founders_token'
-
-export function getFoundersToken() {
-  return localStorage.getItem(FOUNDERS_TOKEN_KEY)
-}
-
-export function setFoundersToken(token) {
-  localStorage.setItem(FOUNDERS_TOKEN_KEY, token)
-}
-
-export function clearFoundersToken() {
-  localStorage.removeItem(FOUNDERS_TOKEN_KEY)
-}
 
 async function parseJson(res) {
   try {
@@ -50,13 +37,15 @@ function isTokenExpired(token) {
 }
 
 async function apiFetch(path, options = {}) {
-  // Firebase users send their Firebase ID token (founder-agents-api verifies it
-  // and checks access with yati-api). People still on the old password login
-  // keep using the separate founders token until they move over.
+  // Firebase ID token only. Someone still on an old password session has no
+  // Firebase token, so ask them to sign in again (Google or email link)
+  // instead of sending a request that would be rejected.
   const { getFreshToken } = await import('./api')
-  const token = localStorage.getItem('yati_auth_provider') === 'firebase'
-    ? await getFreshToken()
-    : getFoundersToken()
+  const token = localStorage.getItem('yati_auth_provider') === 'firebase' ? await getFreshToken() : null
+  if (!token) {
+    if (localStorage.getItem('yati_token')) signalAuthExpired() // an old-style session exists
+    throw new Error('Please sign in again to use this section.')
+  }
   const headers = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -91,19 +80,6 @@ async function apiFetch(path, options = {}) {
 // ---------------------------------------------------------------------------
 // Auth
 // ---------------------------------------------------------------------------
-
-/** Called by loginFoundersOS in api.js — not used directly by components. */
-export async function loginFounders(username, password) {
-  const res = await fetch(`${FOUNDERS_API_BASE}/api/v1/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  })
-  const data = await parseJson(res)
-  if (!res.ok) throw new Error(data.detail || 'Founders login failed')
-  setFoundersToken(data.token)
-  return data
-}
 
 // ---------------------------------------------------------------------------
 // Contacts

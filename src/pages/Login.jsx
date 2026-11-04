@@ -7,7 +7,6 @@ import Footer from "../components/Footer";
 import SEO from "../components/SEO";
 import FirebaseSignIn from "../components/FirebaseSignIn";
 import { fadeUp, fadeRight } from "../lib/motion";
-import { login } from "../lib/api";
 import { useAuth, enterDemoMode } from "../lib/auth";
 
 // Passkey and SSO are part of the design but neither is available yet, so by
@@ -16,15 +15,17 @@ const SHOW_COMING_SOON_METHODS = false;
 
 const MIN_PASSWORD = 8;
 
-// Firebase answers "wrong password" and "no such account" with the same
-// codes (on purpose). In both cases we also try the old password login, so
-// accounts created before the move to Firebase keep working until we retire it.
-const MAYBE_LEGACY_CODES = [
+// Firebase answers "wrong password" and "no such account" with the same codes
+// (on purpose), so for these we add a hint for people who had an account
+// before the move to Firebase.
+const WRONG_CREDENTIAL_CODES = [
   "auth/invalid-credential",
   "auth/invalid-login-credentials",
   "auth/user-not-found",
   "auth/wrong-password",
 ];
+const UPGRADE_HINT =
+  " If you haven\u2019t signed in since our upgrade, use Continue with Google, or Create account with the same email.";
 
 const PERKS = [
   { icon: "\uD83D\uDC8D", title: "Your wellbeing data, in one place", desc: "Steps, sleep and recovery from your Ring sit next to your day." },
@@ -127,14 +128,9 @@ export default function Login() {
         setMode("verify");
       }
     } catch (err) {
-      if (fb && MAYBE_LEGACY_CODES.includes(err.code)) {
-        try {
-          await login(email.trim().toLowerCase(), password);
-          done();
-          return;
-        } catch {
-          // fall through to the normal message
-        }
+      if (fb && WRONG_CREDENTIAL_CODES.includes(err.code)) {
+        setError(fb.friendlyAuthError(err) + UPGRADE_HINT);
+        return;
       }
       showError(fb, err);
     } finally {

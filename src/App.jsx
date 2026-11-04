@@ -15,7 +15,6 @@ import YATI from './pages/yAtI'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import CookiePolicy from './pages/CookiePolicy'
 import Login from './pages/Login'
-import ForgotPassword from './pages/ForgotPassword'
 import Dashboard from './pages/Dashboard'
 import PlanPage from './pages/PlanPage'
 import AgentsPage from './pages/dashboard/AgentsPage'
@@ -59,7 +58,7 @@ export default function App() {
            <Route path="/founder-os" element={<OSPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Navigate to="/login" replace />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/forgot-password" element={<Navigate to="/login" replace />} />
           <Route
             path="/dashboard"
             element={
