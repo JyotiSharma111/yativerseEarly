@@ -85,19 +85,6 @@ export async function createOrder(order) {
   return data
 }
 
-/** Registers a new account — same endpoint the yAtI app uses. */
-export async function register(email, password) {
-  const res = await fetch(`${API_BASE}/api/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  })
-  const data = await parseJson(res)
-  if (!res.ok) throw new Error(data.error || 'Could not create your account.')
-  setSession(data.token, data.email)
-  return data
-}
-
 /**
  * Emails a 6-digit code to the logged-in account's address. Order history
  * stays locked (403 EMAIL_NOT_VERIFIED) until confirmEmailVerification()
@@ -157,19 +144,6 @@ export async function resetPassword(email, code, newPassword) {
   })
   const data = await parseJson(res)
   if (!res.ok) throw new Error(data.error || 'Could not reset your password. Check the code and try again.')
-  return data
-}
-
-/** Logs in — same endpoint the yAtI app uses. */
-export async function login(email, password) {
-  const res = await fetch(`${API_BASE}/api/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  })
-  const data = await parseJson(res)
-  if (!res.ok) throw new Error(data.error || 'Could not log in.')
-  setSession(data.token, data.email)
   return data
 }
 

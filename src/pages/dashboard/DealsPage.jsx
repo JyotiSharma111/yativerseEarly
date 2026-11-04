@@ -3,7 +3,8 @@ import { TrendingUp, Calendar, Zap, AlertCircle, CheckCircle } from "lucide-reac
 import Sidebar from "../../components/dashboard/Sidebar";
 import { useAuth } from "../../lib/auth";
 import { getEntitlements } from "../../lib/api";
-import { listDeals, getFoundersToken } from "../../lib/foundersApi";
+import { listDeals } from "../../lib/foundersApi";
+import { getFreshToken } from "../../lib/api";
 
 const FOUNDERS_API_BASE =
   import.meta.env.VITE_FOUNDERS_API_BASE || "https://founder-agents-api.onrender.com";
@@ -74,9 +75,10 @@ export default function DealsPage() {
     if (demo) { showToast("Sign in to run Deal Coach", "error"); return; }
     setCoaching((c) => ({ ...c, [dealId]: true }));
     try {
+      const token = await getFreshToken();
       const res = await fetch(`${FOUNDERS_API_BASE}/api/v1/orchestrator/event`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getFoundersToken()}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ event: "deal_coach", deal_id: dealId }),
       });
       if (!res.ok) throw new Error("Deal Coach request failed");
